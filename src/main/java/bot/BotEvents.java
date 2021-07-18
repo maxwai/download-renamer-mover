@@ -2,6 +2,7 @@ package bot;
 
 import commands.Mapping;
 import commands.Ping;
+import commands.Reload;
 import commands.Stop;
 import java.util.Locale;
 import net.dv8tion.jda.api.entities.MessageChannel;
@@ -38,6 +39,7 @@ public class BotEvents {
 				case "stop" -> Stop.stopBot(channel); // stops the Bot, this takes a while
 				case "map" -> Mapping
 						.addMapping(channel, content); // add a Mapping or prints all known Mappings
+				case "reload" -> Reload.reloadDirectories(channel); // reload Directories
 			}
 		}
 	}

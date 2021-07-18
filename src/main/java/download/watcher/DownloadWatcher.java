@@ -93,11 +93,11 @@ public class DownloadWatcher {
 		if (!Files.isDirectory(download_folder))
 			throw new IllegalStateException("Could not find Download Folder");
 		
+		mapAllKnownDirectories();
+		mapAllAlternativeDirectories();
 		
 		Thread thread = new Thread(() -> {
 			while (true) {
-				mapAllKnownDirectories();
-				mapAllAlternativeDirectories();
 				checkDownloadFolder();
 				try {
 					//noinspection BusyWait
@@ -113,7 +113,7 @@ public class DownloadWatcher {
 	/**
 	 * Gets all Directories that can be seen in the Anime and Serien directory
 	 */
-	private static void mapAllKnownDirectories() {
+	public static void mapAllKnownDirectories() {
 		logger.info("Getting all Subdirectories");
 		try {
 			Files.newDirectoryStream(anime_folder, Files::isDirectory)
@@ -132,7 +132,7 @@ public class DownloadWatcher {
 	/**
 	 * Gets all the mapping from the config.
 	 */
-	private static void mapAllAlternativeDirectories() {
+	public static void mapAllAlternativeDirectories() {
 		logger.info("Getting all known mappings");
 		Map<String, String> mappings = XMLParser.getMappings();
 		mappings.forEach((s, s2) -> directories.put(s, directories.get(s2)));
