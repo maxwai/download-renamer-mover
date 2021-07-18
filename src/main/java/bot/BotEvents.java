@@ -1,7 +1,8 @@
 package bot;
 
-import commands.Stop;
+import commands.Mapping;
 import commands.Ping;
+import commands.Stop;
 import java.util.Locale;
 import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
@@ -10,8 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BotEvents {
-	
-	private static final Logger logger = LoggerFactory.getLogger("BotStatus");
 	
 	/**
 	 * Is triggered when a Message is written
@@ -37,8 +36,9 @@ public class BotEvents {
 			switch (command) {
 				case "ping" -> Ping.makePing(channel); // make a ping test
 				case "stop" -> Stop.stopBot(channel); // stops the Bot, this takes a while
+				case "map" -> Mapping
+						.addMapping(channel, content); // add a Mapping or prints all known Mappings
 			}
 		}
 	}
-	
 }

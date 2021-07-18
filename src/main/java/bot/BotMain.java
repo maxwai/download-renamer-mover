@@ -1,9 +1,11 @@
 package bot;
 
+import javax.annotation.Nonnull;
 import javax.security.auth.login.LoginException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.hooks.AnnotatedEventManager;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
@@ -24,9 +26,16 @@ public class BotMain {
 	 */
 	private static JDABuilder jdaBuilder;
 	
-	public static void main(String[] args) throws LoginException {
+	@Nonnull
+	public static TextChannel startBot() throws LoginException {
 		initializeJDABuilder();
 		connectBot();
+		TextChannel mainChannel = jda.getGuilds().get(0).getTextChannelById(XMLParser.getMainChannel());
+		if (mainChannel == null)
+			throw new IllegalStateException("can't find given Channel");
+		if (!mainChannel.canTalk())
+			throw new IllegalStateException("can't speak in given Channel");
+		return mainChannel;
 	}
 	
 	/**
