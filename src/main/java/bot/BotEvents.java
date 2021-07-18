@@ -1,6 +1,6 @@
 package bot;
 
-import commands.BotStatus;
+import commands.Stop;
 import commands.Ping;
 import java.util.Locale;
 import net.dv8tion.jda.api.entities.MessageChannel;
@@ -36,7 +36,7 @@ public class BotEvents {
 				command = content;
 			switch (command) {
 				case "ping" -> Ping.makePing(channel); // make a ping test
-				case "stop" -> BotStatus.stopBot(channel); // stops the Bot, this takes a while
+				case "stop" -> Stop.stopBot(channel); // stops the Bot, this takes a while
 			}
 		}
 	}

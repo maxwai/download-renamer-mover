@@ -5,7 +5,7 @@ import net.dv8tion.jda.api.entities.MessageChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BotStatus {
+public class Stop {
 	
 	/**
 	 * The Logger for Log Messages
