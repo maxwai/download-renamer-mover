@@ -65,11 +65,8 @@ public class DownloadWatcher {
 	 *
 	 * @param rootFolder the path of the root Folder of the Server
 	 * @param channel The TextChannel where to give the User Feedback and ask for mappings
-	 *
-	 * @throws IOException If something bad happened
 	 */
-	public static void startDownloadWatcher(String rootFolder, @Nonnull TextChannel channel)
-			throws IOException {
+	public static void startDownloadWatcher(String rootFolder, @Nonnull TextChannel channel) {
 		textChannel = channel;
 		final String DOWNLOAD_FOLDER_NAME = "Download";
 		final String SHARED_VIDEO_FOLDER_NAME = "Shared Video";
@@ -96,11 +93,11 @@ public class DownloadWatcher {
 		if (!Files.isDirectory(download_folder))
 			throw new IllegalStateException("Could not find Download Folder");
 		
-		mapAllKnownDirectories();
-		mapAllAlternativeDirectories();
 		
 		Thread thread = new Thread(() -> {
 			while (true) {
+				mapAllKnownDirectories();
+				mapAllAlternativeDirectories();
 				checkDownloadFolder();
 				try {
 					//noinspection BusyWait
@@ -114,19 +111,22 @@ public class DownloadWatcher {
 	}
 	
 	/**
-	 * Gets all Directories that can be seen in the Anime and Serien Folden
-	 *
-	 * @throws IOException If something bad happened.
+	 * Gets all Directories that can be seen in the Anime and Serien directory
 	 */
-	private static void mapAllKnownDirectories() throws IOException {
+	private static void mapAllKnownDirectories() {
 		logger.info("Getting all Subdirectories");
-		
-		Files.newDirectoryStream(anime_folder, Files::isDirectory)
-				.forEach(subDir -> directories
-						.put(subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
-		Files.newDirectoryStream(series_folder, Files::isDirectory)
-				.forEach(subDir -> directories
-						.put(subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+		try {
+			Files.newDirectoryStream(anime_folder, Files::isDirectory)
+					.forEach(subDir -> directories
+							.put(subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+			Files.newDirectoryStream(series_folder, Files::isDirectory)
+					.forEach(subDir -> directories
+							.put(subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+		} catch (IOException e) {
+			logger.error("Got some sort of IOException");
+			e.printStackTrace();
+			textChannel.sendMessage("Got some sort of IOException please check the logs").queue();
+		}
 	}
 	
 	/**
