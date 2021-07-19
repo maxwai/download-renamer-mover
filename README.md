@@ -29,21 +29,21 @@ to fill it)
   command `java -jar jar-file-name.jar <path to root folder>` <br>
   (do not just double click it to open it)
 * All commands are only in Discord, command line commands are not necessary since the Bot is
-  supposed to be run as a daemon and a service for easiness
+  supposed to be run as a daemon / service
 * It is possible to stop the bot by sending `!stop` over Discord
 * per default only `avi, mp4, mkv` are supported but others can be easily added
 * The root folder specified is per default assumed to be build as follows:
   ```
   root folder
-  |-- Download (Folder where the Videos are Downloaded to) (Can be changed in the Code)
-  `-- Shared Video (Can be changed in the Code)
-      |-- Anime (Folder where all the Anime is saved to) (Can be changed in the Code)
+  |-- Download (Folder where the Videos are Downloaded to) (Name can be changed in the Code)
+  `-- Shared Video (Name can be changed in the Code)
+      |-- Anime (Folder where all the Anime is saved to) (Name can be changed in the Code)
       |   |-- Anime 1
-      |   |   |-- Staffel XY (Can be changed in the Code)
-      |   |   |   |-- Anime 1 - sXYe01.mkv
+      |   |   |-- Staffel XY (Name can be changed in the Code)
+      |   |   |   |-- Anime 1 - sXYeZZ.mkv
       |   |   |   `-- ...
       |   |   `-- ...
       |   `-- ...
-      `-- Serien (Folder where all other Series are saved to) (Can be changed in the Code)
+      `-- Serien (Folder where all other Series are saved to) (Name can be changed in the Code)
           `-- ... (Same as for Anime)
   ```
