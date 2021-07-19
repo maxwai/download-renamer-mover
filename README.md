@@ -1,3 +1,7 @@
+![Java](https://badgen.net/badge/language/Java/green)
+![Java](https://badgen.net/badge/Java/JDK-15/green)
+[![GitHub license](https://badgen.net/github/license/maxwai/download-renamer-mover)](LICENSE)
+
 # Download Watcher, renamer and mover Tool
 
 The source code my personal Bot that Watches a specific Folder and tries to move a downloaded Video
