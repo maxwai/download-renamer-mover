@@ -146,9 +146,11 @@ public class DownloadWatcher {
 		try {
 			Files.newDirectoryStream(download_folder, path -> {
 				if (!Files.isDirectory(path)) {
-					return path.toString().endsWith(".mp4") ||
-						   path.toString().endsWith(".mkv") ||
-						   path.toString().endsWith(".avi");
+					System.out.println(path.getFileName());
+					return (path.toString().endsWith(".mp4") ||
+							path.toString().endsWith(".mkv") ||
+							path.toString().endsWith(".avi")) &&
+						   !path.getFileName().startsWith("_");
 				}
 				return false;
 			}).forEach(filesToDo::add);
@@ -188,6 +190,14 @@ public class DownloadWatcher {
 				textChannel.sendMessage("`" + name
 										+ "` did not match regex. Please adjust the regex to match fileName")
 						.queue();
+				try {
+					Files.move(video, video.getParent().resolve("_" + video.getFileName()));
+				} catch (IOException e) {
+					logger.error("Got some sort of IOException");
+					e.printStackTrace();
+					textChannel.sendMessage("Got some sort of IOException please check the logs")
+							.queue();
+				}
 			}
 		}
 	}
@@ -204,10 +214,21 @@ public class DownloadWatcher {
 	private static void moveVideo(@Nonnull Path destination, @Nonnull Path video,
 			@Nullable String season, int episode, @Nonnull String file_format) {
 		int season_number;
-		if (season == null)
-			season_number = -1;
-		else
-			season_number = Integer.parseInt(season.substring(1));
+		if (season == null) {
+			textChannel.sendMessage("`" + video.getFileName().toString()
+									+ "`does not have Season. Please add Season or move it manually")
+					.queue();
+			try {
+				Files.move(video, video.getParent().resolve("_" + video.getFileName()));
+			} catch (IOException e) {
+				logger.error("Got some sort of IOException");
+				e.printStackTrace();
+				textChannel.sendMessage("Got some sort of IOException please check the logs")
+						.queue();
+			}
+			return;
+		}
+		season_number = Integer.parseInt(season.substring(1));
 		
 		destination = destination.resolve(SEASON_PRESET.formatted(season_number));
 		if (!Files.exists(destination)) {
