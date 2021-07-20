@@ -146,7 +146,6 @@ public class DownloadWatcher {
 		try {
 			Files.newDirectoryStream(download_folder, path -> {
 				if (!Files.isDirectory(path)) {
-					System.out.println(path.getFileName());
 					return (path.toString().endsWith(".mp4") ||
 							path.toString().endsWith(".mkv") ||
 							path.toString().endsWith(".avi")) &&
