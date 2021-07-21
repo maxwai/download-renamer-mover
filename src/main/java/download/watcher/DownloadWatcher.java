@@ -149,7 +149,7 @@ public class DownloadWatcher {
 					return (path.toString().endsWith(".mp4") ||
 							path.toString().endsWith(".mkv") ||
 							path.toString().endsWith(".avi")) &&
-						   !path.getFileName().startsWith("_");
+						   !path.getFileName().toString().startsWith("_");
 				}
 				return false;
 			}).forEach(filesToDo::add);
@@ -215,7 +215,7 @@ public class DownloadWatcher {
 		int season_number;
 		if (season == null) {
 			textChannel.sendMessage("`" + video.getFileName().toString()
-									+ "`does not have Season. Please add Season or move it manually")
+									+ "` does not have Season. Please add Season or move it manually")
 					.queue();
 			try {
 				Files.move(video, video.getParent().resolve("_" + video.getFileName()));
