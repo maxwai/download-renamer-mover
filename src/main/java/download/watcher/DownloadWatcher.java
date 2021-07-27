@@ -7,9 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -43,6 +45,10 @@ public class DownloadWatcher {
 	 * The time the thread waits until it checks again if new files are present.
 	 */
 	private static final int WAIT_TIME = 60 * 1000;
+	/**
+	 * Set with all the mappings that still need to be done.
+	 */
+	private static final Set<String> mappingToDo = new HashSet<>();
 	/**
 	 * The TextChannel where to give the User Feedback and ask for mappings
 	 */
@@ -98,7 +104,7 @@ public class DownloadWatcher {
 		
 		Thread thread = new Thread(() -> {
 			while (true) {
-				checkDownloadFolder();
+				checkDownloadFolder(false);
 				try {
 					//noinspection BusyWait
 					Thread.sleep(WAIT_TIME);
@@ -141,7 +147,7 @@ public class DownloadWatcher {
 	/**
 	 * Will check the download Folder and move every File possible to the correct Folder.
 	 */
-	public static void checkDownloadFolder() {
+	public static void checkDownloadFolder(boolean checkTilde) {
 		final List<Path> filesToDo = new ArrayList<>();
 		try {
 			Files.newDirectoryStream(download_folder, path -> {
@@ -149,7 +155,8 @@ public class DownloadWatcher {
 					return (path.toString().endsWith(".mp4") ||
 							path.toString().endsWith(".mkv") ||
 							path.toString().endsWith(".avi")) &&
-						   !path.getFileName().toString().startsWith("_");
+						   !path.getFileName().toString().startsWith("_") &&
+						   (checkTilde || !path.getFileName().toString().startsWith("~"));
 				}
 				return false;
 			}).forEach(filesToDo::add);
@@ -157,6 +164,22 @@ public class DownloadWatcher {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
 			textChannel.sendMessage("Got some sort of IOException please check the logs").queue();
+		}
+		if (checkTilde) {
+			mappingToDo.clear();
+			filesToDo.forEach(video -> {
+				if (video.getFileName().toString().startsWith("~"))
+					try {
+						Files.move(video, video.getParent()
+								.resolve(video.getFileName().toString().substring(1)));
+					} catch (IOException e) {
+						logger.error("Got some sort of IOException");
+						e.printStackTrace();
+						textChannel
+								.sendMessage("Got some sort of IOException please check the logs")
+								.queue();
+					}
+			});
 		}
 		if (!filesToDo.isEmpty()) {
 			logger.info("Found " + filesToDo.size() + " files in the download Folder");
@@ -171,18 +194,28 @@ public class DownloadWatcher {
 				if (directories.containsKey(video_name)) {
 					moveVideo(directories.get(video_name), video, season, episode,
 							file_format);
-					checkDownloadFolder();
+					checkDownloadFolder(checkTilde);
 				} else {
 					logger.warn("File name \"" + video_name + "\" is not known");
-					
-					EmbedBuilder eb = new EmbedBuilder();
-					eb.setColor(Color.RED);
-					eb.setTitle("Unknown series");
-					eb.setDescription(video_name);
-					eb.addField("Please add a Mapping with following command:",
-							"`!map " + video_name + " -> <series name on server>`", false);
-					
-					textChannel.sendMessage(eb.build()).queue();
+					try {
+						Files.move(video, video.getParent().resolve("~" + video.getFileName()));
+					} catch (IOException e) {
+						logger.error("Got some sort of IOException");
+						e.printStackTrace();
+						textChannel
+								.sendMessage("Got some sort of IOException please check the logs")
+								.queue();
+					}
+					if (mappingToDo.add(video_name)) {
+						EmbedBuilder eb = new EmbedBuilder();
+						eb.setColor(Color.RED);
+						eb.setTitle("Unknown series");
+						eb.setDescription(video_name);
+						eb.addField("Please add a Mapping with following command:",
+								"`!map " + video_name + " -> <series name on server>`", false);
+						
+						textChannel.sendMessage(eb.build()).queue();
+					}
 				}
 			} else {
 				logger.error("File did not contain regex");

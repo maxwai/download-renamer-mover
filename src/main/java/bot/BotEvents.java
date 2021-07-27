@@ -38,7 +38,7 @@ public class BotEvents {
 				case "ping" -> Ping.makePing(channel); // make a ping test
 				case "stop" -> Stop.stopBot(channel); // stops the Bot, this takes a while
 				case "map" -> Mapping
-						.addMapping(channel, content); // add a Mapping or prints all known Mappings
+						.addMapping(event, content); // add a Mapping or prints all known Mappings
 				case "reload" -> Reload.reloadDirectories(channel); // reload Directories
 			}
 		}

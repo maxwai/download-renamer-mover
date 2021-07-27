@@ -23,6 +23,6 @@ public class Reload {
 		DownloadWatcher.mapAllKnownDirectories();
 		DownloadWatcher.mapAllAlternativeDirectories();
 		channel.sendMessage("Reloaded all Directories").queue();
-		DownloadWatcher.checkDownloadFolder();
+		DownloadWatcher.checkDownloadFolder(true);
 	}
 }

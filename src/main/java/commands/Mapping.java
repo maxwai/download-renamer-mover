@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xml.XMLParser;
@@ -24,10 +24,10 @@ public class Mapping {
 	/**
 	 * Will add a Mapping to the Bot
 	 *
-	 * @param channel The Channel where the Message was send.
+	 * @param event The event where the Message was send.
 	 * @param content The Content of the Message that was send.
 	 */
-	public static void addMapping(MessageChannel channel, String content) {
+	public static void addMapping(MessageReceivedEvent event, String content) {
 		if (content.equals("map")) {
 			EmbedBuilder eb = new EmbedBuilder();
 			eb.setColor(Color.YELLOW);
@@ -45,9 +45,9 @@ public class Mapping {
 				}
 			});
 			mappings.forEach((s, strings) -> eb
-					.addField(s, "`" + String.join("`\n`", strings) + "`", false));
+					.addField(s, "`" + String.join("`\n`", strings) + "`", true));
 			logger.info("Sending mappings");
-			channel.sendMessage(eb.build()).queue();
+			event.getChannel().sendMessage(eb.build()).queue();
 		} else {
 			if (content.contains("->")) {
 				final String alt = content.substring(4, content.indexOf("->")).trim()
@@ -56,15 +56,16 @@ public class Mapping {
 						.toLowerCase(Locale.ROOT);
 				if (DownloadWatcher.directories.containsKey(OG)) {
 					logger.info("Adding new Mapping");
+					event.getMessage().addReaction("\u2705").queue();
 					DownloadWatcher.directories.put(alt, DownloadWatcher.directories.get(OG));
 					XMLParser.addMapping(new SimpleEntry<>(alt, OG));
-					DownloadWatcher.checkDownloadFolder();
+					DownloadWatcher.checkDownloadFolder(true);
 				} else {
 					logger.warn("Mapping could not be added");
-					channel.sendMessage("Don't know `" + OG + "` please try again.").queue();
+					event.getChannel().sendMessage("Don't know `" + OG + "` please try again.").queue();
 				}
 			} else
-				channel.sendMessage("""
+				event.getChannel().sendMessage("""
 						Not correct command format.
 						Correct format is:
 						`!map <alternative name> -> <series name on server>`""").queue();
