@@ -1,6 +1,7 @@
 package commands;
 
 import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.events.interaction.SlashCommandEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,19 @@ public class Ping {
 		logger.info("Sending Ping Message");
 		channel.sendMessage("Pong!").queue(message ->
 				message.editMessageFormat("Pong: %d ms", System.currentTimeMillis() - time)
+						.queue());
+	}
+	
+	/**
+	 * Will send a "Pong!" Message and then edit this message to know the current ping of the Bot
+	 *
+	 * @param event The event where the ping was send from
+	 */
+	public static void makePing(SlashCommandEvent event) {
+		long time = System.currentTimeMillis();
+		logger.info("Sending Ping Message");
+		event.reply("Pong!").queue(interactionHook ->
+				interactionHook.editOriginalFormat("Pong: %d ms", System.currentTimeMillis() - time)
 						.queue());
 	}
 }
