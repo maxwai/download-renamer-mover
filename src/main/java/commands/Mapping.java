@@ -19,7 +19,7 @@ public class Mapping {
 	/**
 	 * The Logger for Log Messages
 	 */
-	private static final Logger logger = LoggerFactory.getLogger("Mapping");
+	private static final Logger logger = LoggerFactory.getLogger("Mapping Command");
 	
 	/**
 	 * Will add a Mapping to the Bot
