@@ -39,7 +39,7 @@ public class BotMain {
 	}
 	
 	/**
-	 * Will setup the JDA Builder with the necessary settings
+	 * Will set up the JDA Builder with the necessary settings
 	 */
 	private static void initializeJDABuilder() {
 		jdaBuilder = JDABuilder.createDefault(TOKEN)
