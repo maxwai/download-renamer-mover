@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -167,10 +168,10 @@ public class DownloadWatcher {
 		}
 		if (checkTilde) {
 			mappingToDo.clear();
-			filesToDo.forEach(video -> {
+			filesToDo.replaceAll(video -> {
 				if (video.getFileName().toString().startsWith("~"))
 					try {
-						Files.move(video, video.getParent()
+						return Files.move(video, video.getParent()
 								.resolve(video.getFileName().toString().substring(1)));
 					} catch (IOException e) {
 						logger.error("Got some sort of IOException");
@@ -178,8 +179,12 @@ public class DownloadWatcher {
 						textChannel
 								.sendMessage("Got some sort of IOException please check the logs")
 								.queue();
+						return null;
 					}
+				else
+					return video;
 			});
+			filesToDo.removeIf(Objects::isNull);
 		}
 		if (!filesToDo.isEmpty()) {
 			logger.info("Found " + filesToDo.size() + " files in the download Folder");
