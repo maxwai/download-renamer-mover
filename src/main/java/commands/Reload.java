@@ -10,7 +10,7 @@ public class Reload {
 	/**
 	 * The Logger for Log Messages
 	 */
-	private static final Logger logger = LoggerFactory.getLogger("Ping Command");
+	private static final Logger logger = LoggerFactory.getLogger("Reload Command");
 	
 	/**
 	 * Will reload all Directories
