@@ -217,7 +217,7 @@ public class DownloadWatcher {
 						eb.setTitle("Unknown series");
 						eb.setDescription(video_name);
 						eb.addField("Please add a Mapping with following command:",
-								"`!map " + video_name + " -> <series name on server>`", false);
+								"`/map new alt:" + video_name + " og:<series name on server>`", false);
 						
 						textChannel.sendMessage(eb.build()).queue();
 					}
