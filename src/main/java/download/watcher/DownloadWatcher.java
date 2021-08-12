@@ -296,6 +296,14 @@ public class DownloadWatcher {
 			textChannel.sendMessage(
 					"`" + video.getFileName().toString() + "` is already present please check")
 					.queue();
+			try {
+				Files.move(video, video.getParent().resolve("_" + video.getFileName()));
+			} catch (IOException e1) {
+				logger.error("Got some sort of IOException");
+				e1.printStackTrace();
+				textChannel.sendMessage("Got some sort of IOException please check the logs")
+						.queue();
+			}
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
