@@ -219,7 +219,7 @@ public class DownloadWatcher {
 						eb.addField("Please add a Mapping with following command:",
 								"`/map new alt:" + video_name + " og:<series name on server>`", false);
 						
-						textChannel.sendMessage(eb.build()).queue();
+						textChannel.sendMessageEmbeds(eb.build()).queue();
 					}
 				}
 			} else {

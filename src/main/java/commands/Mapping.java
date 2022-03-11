@@ -37,7 +37,7 @@ public class Mapping {
 		if (content.equals("map")) {
 			
 			logger.info("Sending mappings");
-			event.getChannel().sendMessage(getMappingEmbed()).queue();
+			event.getChannel().sendMessageEmbeds(getMappingEmbed()).queue();
 		} else {
 			if (content.contains("->")) {
 				final String alt = content.substring(4, content.indexOf("->")).trim()
