@@ -4,7 +4,7 @@ import static bot.BotEvents.MAP_ALT_OPTION;
 import static bot.BotEvents.MAP_OG_OPTION;
 
 import download.watcher.DownloadWatcher;
-import java.awt.Color;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.SlashCommandEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import org.slf4j.Logger;
@@ -37,7 +35,8 @@ public class Mapping {
 		if (content.equals("map")) {
 			
 			logger.info("Sending mappings");
-			event.getChannel().sendMessageEmbeds(getMappingEmbed()).queue();
+			event.getChannel().sendMessage("Here are all the Mappings")
+					.addFile(getMappingEmbed(), "mappings.md").queue();
 		} else {
 			if (content.contains("->")) {
 				final String alt = content.substring(4, content.indexOf("->")).trim()
@@ -69,7 +68,7 @@ public class Mapping {
 	 * @param event The event where the Message was sent.
 	 */
 	public static void sendMappings(SlashCommandEvent event) {
-		event.replyEmbeds(getMappingEmbed()).queue();
+		event.reply("Here are all the Mappings").addFile(getMappingEmbed(), "mappings.md").queue();
 	}
 	
 	/**
@@ -97,13 +96,11 @@ public class Mapping {
 		}
 	}
 	
-	private static MessageEmbed getMappingEmbed() {
-		EmbedBuilder eb = new EmbedBuilder();
-		eb.setColor(Color.YELLOW);
-		eb.setDescription("Known Mappings:");
+	private static byte[] getMappingEmbed() {
+		StringBuilder file = new StringBuilder();
 		Map<String, List<String>> mappings = new HashMap<>();
 		DownloadWatcher.directories.forEach((s, path) -> {
-			if (!path.getFileName().toString().toLowerCase(Locale.ROOT).equals(s)) {
+			if (path != null && !path.getFileName().toString().toLowerCase(Locale.ROOT).equals(s)) {
 				if (mappings.containsKey(path.getFileName().toString()))
 					mappings.get(path.getFileName().toString()).add(s);
 				else {
@@ -113,8 +110,12 @@ public class Mapping {
 				}
 			}
 		});
-		mappings.forEach((s, strings) -> eb
-				.addField(s, "`" + String.join("`\n`", strings) + "`", true));
-		return eb.build();
+		mappings.forEach((s, strings) -> file.append(s)
+				.append(":")
+				.append("\n\t-")
+				.append(String.join("\n\t-", strings)));
+		if (file.isEmpty())
+			file.append("No mappings");
+		return file.toString().getBytes(StandardCharsets.UTF_8);
 	}
 }
