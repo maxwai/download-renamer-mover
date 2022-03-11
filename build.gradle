@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
 group 'de.maximilian'
@@ -19,3 +20,15 @@ dependencies {
     }
     implementation 'ch.qos.logback:logback-classic:1.2.11'
 }
+
+application {
+    mainClass.set("Main")
+}
+
+//jar {
+//    //noinspection GroovyAssignabilityCheck
+//    manifest {
+//        attributes 'Main-Class': 'Main'
+//    }
+//    from(configurations.implementation.collect { it.isDirectory() ? it : zipTree(it) }) {}
+//}

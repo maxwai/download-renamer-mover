@@ -32,7 +32,7 @@ public class XMLParser {
 	
 	private static final Logger logger = LoggerFactory.getLogger("XMLParser");
 	
-	private static final String CONFIG_FILE_NAME = "Config.xml";
+	private static final String CONFIG_FILE_NAME = "appdata/Config.xml";
 	
 	private static final String BOT_TOKEN_TAG = "BotToken";
 	private static final String MAIN_CHANNEL_TAG = "MainChannel";

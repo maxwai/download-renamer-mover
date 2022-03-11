@@ -1,0 +1,10 @@
+version: '3.2'
+
+services:
+  bot:
+    container_name: DownloadWatcher
+    build: .
+    restart: "no"
+    volumes:
+      - ./server:/server
+      - ./appdata:/home/gradle/project/appdata
