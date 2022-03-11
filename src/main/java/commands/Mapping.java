@@ -111,9 +111,8 @@ public class Mapping {
 			}
 		});
 		mappings.forEach((s, strings) -> file.append(s)
-				.append(":")
-				.append("\n\t-")
-				.append(String.join("\n\t-", strings))
+				.append(" : ")
+				.append(String.join("\n" + " ".repeat(s.length() + 3), strings))
 				.append("\n"));
 		if (file.isEmpty())
 			file.append("No mappings");
