@@ -192,7 +192,7 @@ public class DownloadWatcher {
 			String name = video.getFileName().toString();
 			Matcher matcher = pattern.matcher(name.toLowerCase(Locale.ROOT));
 			if (matcher.find()) {
-				final String video_name = matcher.group(1).trim();
+				final String video_name = matcher.group(1).trim().replaceAll("\\.", " ");
 				final String season = matcher.group(3);
 				final int episode = Integer.parseInt(matcher.group(4).substring(1));
 				final String file_format = matcher.group(5);
