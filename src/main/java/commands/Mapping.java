@@ -113,7 +113,8 @@ public class Mapping {
 		mappings.forEach((s, strings) -> file.append(s)
 				.append(":")
 				.append("\n\t-")
-				.append(String.join("\n\t-", strings)));
+				.append(String.join("\n\t-", strings))
+				.append("\n"));
 		if (file.isEmpty())
 			file.append("No mappings");
 		return file.toString().getBytes(StandardCharsets.UTF_8);
