@@ -1,5 +1,5 @@
 ![Java](https://badgen.net/badge/language/Java/green)
-![Java](https://badgen.net/badge/Java/JDK-15/green)
+![Java](https://badgen.net/badge/Java/JDK-17/green)
 [![GitHub license](https://badgen.net/github/license/maxwai/download-renamer-mover)](LICENSE)
 
 # Download Watcher, renamer and mover Tool
