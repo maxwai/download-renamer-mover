@@ -12,8 +12,8 @@ mapping that will be saved.
 
 ### Prerequisites
 
-You will need Java Version 15 or later to make it work. It may work with lower Java versions, but it
-was programmed using the Java 15 JDK.
+You will need Java Version 17 or later to make it work. It may work with lower Java versions, but it
+was programmed using the Java 17 JDK.
 
 **This Bot is supposed to be running on only one Discord Server at a Time.**
 
