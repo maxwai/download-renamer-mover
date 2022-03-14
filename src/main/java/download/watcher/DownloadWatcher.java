@@ -36,8 +36,8 @@ public class DownloadWatcher {
 	/**
 	 * The Regex to parse a new downloaded File
 	 */
-	private static final Pattern pattern = Pattern
-			.compile("^(.*?)((s\\d+)[- ]?)?(e\\d+).*?(.*)?\\.([a-zA-Z0-9]*)");
+	private static final Pattern pattern = Pattern.compile(
+			"^(.*?)((s\\d+)[- ]?)?(e\\d+).*?(.*)?\\.([a-zA-Z0-9]*)");
 	/**
 	 * The Preset for the Season Directory
 	 */
@@ -87,12 +87,13 @@ public class DownloadWatcher {
 			throw new IllegalArgumentException(
 					"Did not give correct Path to Public Share of Server");
 		
-		anime_folder = Path.of(root_folder.toString(), SHARED_VIDEO_FOLDER_NAME, ANIME_FOLDER_NAME);
+		anime_folder = Path.of(root_folder.toString(), SHARED_VIDEO_FOLDER_NAME,
+				ANIME_FOLDER_NAME);
 		if (!Files.isDirectory(anime_folder))
 			throw new IllegalStateException("Could not find Anime Folder");
 		
-		series_folder = Path
-				.of(root_folder.toString(), SHARED_VIDEO_FOLDER_NAME, SERIES_FOLDER_NAME);
+		series_folder = Path.of(root_folder.toString(), SHARED_VIDEO_FOLDER_NAME,
+				SERIES_FOLDER_NAME);
 		if (!Files.isDirectory(series_folder))
 			throw new IllegalStateException("Could not find Series Folder");
 		
@@ -123,12 +124,12 @@ public class DownloadWatcher {
 	public static void mapAllKnownDirectories() {
 		logger.info("Getting all Subdirectories");
 		try {
-			Files.newDirectoryStream(anime_folder, Files::isDirectory)
-					.forEach(subDir -> directories
-							.put(subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
-			Files.newDirectoryStream(series_folder, Files::isDirectory)
-					.forEach(subDir -> directories
-							.put(subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+			Files.newDirectoryStream(anime_folder, Files::isDirectory).forEach(
+					subDir -> directories.put(
+							subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+			Files.newDirectoryStream(series_folder, Files::isDirectory).forEach(
+					subDir -> directories.put(
+							subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
@@ -153,11 +154,10 @@ public class DownloadWatcher {
 		try {
 			Files.newDirectoryStream(download_folder, path -> {
 				if (!Files.isDirectory(path)) {
-					return (path.toString().endsWith(".mp4") ||
-							path.toString().endsWith(".mkv") ||
-							path.toString().endsWith(".avi")) &&
-						   !path.getFileName().toString().startsWith("_") &&
-						   (checkTilde || !path.getFileName().toString().startsWith("~"));
+					return (path.toString().endsWith(".mp4") || path.toString().endsWith(".mkv")
+							|| path.toString().endsWith(".avi")) && !path.getFileName().toString()
+							.startsWith("_") && (checkTilde || !path.getFileName().toString()
+							.startsWith("~"));
 				}
 				return false;
 			}).forEach(filesToDo::add);
@@ -176,9 +176,8 @@ public class DownloadWatcher {
 					} catch (IOException e) {
 						logger.error("Got some sort of IOException");
 						e.printStackTrace();
-						textChannel
-								.sendMessage("Got some sort of IOException please check the logs")
-								.queue();
+						textChannel.sendMessage(
+								"Got some sort of IOException please check the logs").queue();
 						return null;
 					}
 				else
@@ -198,8 +197,7 @@ public class DownloadWatcher {
 				// group 5 is all the not needed information between episode number and file ending
 				final String file_format = matcher.group(6);
 				if (directories.containsKey(video_name)) {
-					moveVideo(directories.get(video_name), video, season, episode,
-							file_format);
+					moveVideo(directories.get(video_name), video, season, episode, file_format);
 					checkDownloadFolder(checkTilde);
 				} else {
 					logger.warn("File name \"" + video_name + "\" is not known");
@@ -208,9 +206,8 @@ public class DownloadWatcher {
 					} catch (IOException e) {
 						logger.error("Got some sort of IOException");
 						e.printStackTrace();
-						textChannel
-								.sendMessage("Got some sort of IOException please check the logs")
-								.queue();
+						textChannel.sendMessage(
+								"Got some sort of IOException please check the logs").queue();
 					}
 					if (mappingToDo.add(video_name)) {
 						EmbedBuilder eb = new EmbedBuilder();
@@ -218,16 +215,17 @@ public class DownloadWatcher {
 						eb.setTitle("Unknown series");
 						eb.setDescription(video_name);
 						eb.addField("Please add a Mapping with following command:",
-								"`/map new alt:" + video_name + " og:<series name on server>`", false);
+								"`/map new alt:" + video_name + " og:<series name on server>`",
+								false);
 						
 						textChannel.sendMessageEmbeds(eb.build()).queue();
 					}
 				}
 			} else {
 				logger.error("File did not contain regex");
-				textChannel.sendMessage("`" + name
-										+ "` did not match regex. Please adjust the regex to match fileName")
-						.queue();
+				textChannel.sendMessage(
+						"`" + name + "` did not match regex. Please adjust the regex to match"
+						+ " fileName").queue();
 				try {
 					Files.move(video, video.getParent().resolve("_" + video.getFileName()));
 				} catch (IOException e) {
@@ -254,8 +252,8 @@ public class DownloadWatcher {
 		int season_number;
 		if (season == null) {
 			textChannel.sendMessage("`" + video.getFileName().toString()
-									+ "` does not have Season. Please add Season or move it manually")
-					.queue();
+									+ "` does not have Season. Please add Season or move it "
+									+ "manually").queue();
 			try {
 				Files.move(video, video.getParent().resolve("_" + video.getFileName()));
 			} catch (IOException e) {
@@ -283,16 +281,17 @@ public class DownloadWatcher {
 		
 		try {
 			Path target = destination.resolve(destination.getParent().getFileName().toString()
-					+ " - s%1$02de%2$02d.%3$s".formatted(season_number, episode, file_format));
-			logger.info("Moving " + video.getFileName().toString() + " to " + target);
-			textChannel.sendMessage("Moving `" + video.getFileName().toString() + "` as `" + target
-									+ "` to known folder.")
-					.queue();
+											  + " - s%1$02de%2$02d.%3$s".formatted(season_number,
+					episode, file_format));
+			logger.info("Moving " + video.getFileName().toString() + " to " + target.getFileName());
+			textChannel.sendMessage(
+					"Moving `" + video.getFileName().toString() + "` as `" + target.getFileName()
+					+ "` to known folder.").queue();
 			Files.move(video, target);
 		} catch (FileAlreadyExistsException e) {
 			logger.warn(video.getFileName().toString() + " is a duplicate File");
 			textChannel.sendMessage(
-					"`" + video.getFileName().toString() + "` is already present please check")
+							"`" + video.getFileName().toString() + "` is already present please " + "check")
 					.queue();
 			try {
 				Files.move(video, video.getParent().resolve("_" + video.getFileName()));
