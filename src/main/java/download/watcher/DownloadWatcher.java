@@ -37,7 +37,7 @@ public class DownloadWatcher {
 	 * The Regex to parse a new downloaded File
 	 */
 	private static final Pattern pattern = Pattern
-			.compile("^(.*?)((s\\d+)[- ]?)?(e\\d+).*?\\.(.*)");
+			.compile("^(.*?)((s\\d+)[- ]?)?(e\\d+).*?(.*)?\\.([a-zA-Z0-9]*)	");
 	/**
 	 * The Preset for the Season Directory
 	 */
@@ -195,7 +195,8 @@ public class DownloadWatcher {
 				final String video_name = matcher.group(1).replaceAll("\\.", " ").trim();
 				final String season = matcher.group(3);
 				final int episode = Integer.parseInt(matcher.group(4).substring(1));
-				final String file_format = matcher.group(5);
+				// group 5 is all the not needed information between episode number and file ending
+				final String file_format = matcher.group(6);
 				if (directories.containsKey(video_name)) {
 					moveVideo(directories.get(video_name), video, season, episode,
 							file_format);
@@ -281,12 +282,9 @@ public class DownloadWatcher {
 		}
 		
 		try {
-			Path target = destination.resolve(
-					destination.getParent()
-							.getFileName().
-							toString()
+			Path target = destination.resolve(destination.getParent().getFileName().toString()
 					+ " - s%1$02de%2$02d.%3$s".formatted(season_number, episode, file_format));
-			logger.info("Moving file to " + target);
+			logger.info("Moving " + video.getFileName().toString() + " to " + target);
 			textChannel.sendMessage("Moving `" + video.getFileName().toString() + "` as `" + target
 									+ "` to known folder.")
 					.queue();
