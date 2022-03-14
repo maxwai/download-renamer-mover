@@ -37,7 +37,7 @@ public class DownloadWatcher {
 	 * The Regex to parse a new downloaded File
 	 */
 	private static final Pattern pattern = Pattern
-			.compile("^(.*?)((s\\d+)[- ]?)?(e\\d+).*?(.*)?\\.([a-zA-Z0-9]*)	");
+			.compile("^(.*?)((s\\d+)[- ]?)?(e\\d+).*?(.*)?\\.([a-zA-Z0-9]*)");
 	/**
 	 * The Preset for the Season Directory
 	 */
