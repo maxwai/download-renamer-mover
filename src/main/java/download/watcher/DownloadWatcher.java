@@ -281,16 +281,16 @@ public class DownloadWatcher {
 		}
 		
 		try {
-			logger.info("Moving file to " + destination
-					.resolve(destination.getParent().getFileName().toString()
-							 + " - s%1$02de%2$02d.%3$s"
-									 .formatted(season_number, episode, file_format)));
-			textChannel
-					.sendMessage("Moving `" + video.getFileName().toString() + "` to known folder.")
+			Path target = destination.resolve(
+					destination.getParent()
+							.getFileName().
+							toString()
+					+ " - s%1$02de%2$02d.%3$s".formatted(season_number, episode, file_format));
+			logger.info("Moving file to " + target);
+			textChannel.sendMessage("Moving `" + video.getFileName().toString() + "` as `" + target
+									+ "` to known folder.")
 					.queue();
-			Files.move(video, destination.resolve(
-					destination.getParent().getFileName().toString() + " - s%1$02de%2$02d.%3$s"
-							.formatted(season_number, episode, file_format)));
+			Files.move(video, target);
 		} catch (FileAlreadyExistsException e) {
 			logger.warn(video.getFileName().toString() + " is a duplicate File");
 			textChannel.sendMessage(
