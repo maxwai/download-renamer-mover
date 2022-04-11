@@ -2,6 +2,7 @@ package download.watcher;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -151,16 +152,17 @@ public class DownloadWatcher {
 	 */
 	public static void checkDownloadFolder(boolean checkTilde) {
 		final List<Path> filesToDo = new ArrayList<>();
-		try {
-			Files.newDirectoryStream(download_folder, path -> {
-				if (!Files.isDirectory(path)) {
-					return (path.toString().endsWith(".mp4") || path.toString().endsWith(".mkv")
-							|| path.toString().endsWith(".avi")) && !path.getFileName().toString()
-							.startsWith("_") && (checkTilde || !path.getFileName().toString()
-							.startsWith("~"));
-				}
-				return false;
-			}).forEach(filesToDo::add);
+		DirectoryStream.Filter<Path> filter = path -> {
+			if (!Files.isDirectory(path)) {
+				return (path.toString().endsWith(".mp4") || path.toString().endsWith(".mkv")
+						|| path.toString().endsWith(".avi")) && !path.getFileName().toString()
+						.startsWith("_") && (checkTilde || !path.getFileName().toString()
+						.startsWith("~"));
+			}
+			return false;
+		};
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(download_folder, filter)) {
+			stream.forEach(filesToDo::add);
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
