@@ -193,7 +193,10 @@ public class DownloadWatcher {
 			String name = video.getFileName().toString();
 			Matcher matcher = pattern.matcher(name.toLowerCase(Locale.ROOT));
 			if (matcher.find()) {
-				final String video_name = matcher.group(1).replaceAll("\\.", " ").trim();
+				final String video_name = matcher.group(1)
+						.replaceAll("\\.", " ")
+						.replaceAll("-", " ")
+						.trim();
 				final String season = matcher.group(3);
 				final int episode = Integer.parseInt(matcher.group(4).substring(1));
 				// group 5 is all the not needed information between episode number and file ending
