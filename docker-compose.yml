@@ -8,3 +8,6 @@ services:
     volumes:
       - ./server:/server
       - ./appdata:/home/gradle/project/appdata
+    environment:
+      - PUID=1000
+      - PGID=1000
