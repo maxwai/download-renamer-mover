@@ -48,6 +48,10 @@ public class DownloadWatcher {
 	 */
 	private static final int WAIT_TIME = 60 * 1000;
 	/**
+	 * The emoji to prepend when an error occurs
+	 */
+	private static final String ERROR_EMOJI = ":x: ";
+	/**
 	 * Set with all the mappings that still need to be done.
 	 */
 	private static final Set<String> mappingToDo = new HashSet<>();
@@ -135,7 +139,8 @@ public class DownloadWatcher {
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
-			textChannel.sendMessage("Got some sort of IOException please check the logs").queue();
+			textChannel.sendMessage(
+					ERROR_EMOJI + "Got some sort of IOException please check the logs").queue();
 		}
 	}
 	
@@ -167,7 +172,8 @@ public class DownloadWatcher {
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
-			textChannel.sendMessage("Got some sort of IOException please check the logs").queue();
+			textChannel.sendMessage(
+					ERROR_EMOJI + "Got some sort of IOException please check the logs").queue();
 		}
 		if (checkTilde) {
 			mappingToDo.clear();
@@ -180,7 +186,8 @@ public class DownloadWatcher {
 						logger.error("Got some sort of IOException");
 						e.printStackTrace();
 						textChannel.sendMessage(
-								"Got some sort of IOException please check the logs").queue();
+								ERROR_EMOJI + "Got some sort of IOException please check the "
+								+ "logs").queue();
 						return null;
 					}
 				else
@@ -213,7 +220,9 @@ public class DownloadWatcher {
 						logger.error("Got some sort of IOException");
 						e.printStackTrace();
 						textChannel.sendMessage(
-								"Got some sort of IOException please check the logs").queue();
+										ERROR_EMOJI + "Got some sort of IOException please check "
+										+ "the logs")
+								.queue();
 					}
 					if (mappingToDo.add(video_name)) {
 						EmbedBuilder eb = new EmbedBuilder();
@@ -229,15 +238,18 @@ public class DownloadWatcher {
 				}
 			} else {
 				logger.error("File did not contain regex");
-				textChannel.sendMessage(
-						"`" + name + "` did not match regex. Please adjust the regex to match"
-						+ " fileName").queue();
+				textChannel.sendMessage(ERROR_EMOJI + "`" + name
+										+ "` did not match regex. Please adjust the regex to match"
+										+ " fileName")
+						.queue();
 				try {
 					Files.move(video, video.getParent().resolve("_" + video.getFileName()));
 				} catch (IOException e) {
 					logger.error("Got some sort of IOException");
 					e.printStackTrace();
-					textChannel.sendMessage("Got some sort of IOException please check the logs")
+					textChannel.sendMessage(
+									ERROR_EMOJI + "Got some sort of IOException please check the "
+									+ "logs")
 							.queue();
 				}
 			}
@@ -257,7 +269,7 @@ public class DownloadWatcher {
 			@Nullable String season, int episode, @Nonnull String file_format) {
 		int season_number;
 		if (season == null) {
-			textChannel.sendMessage("`" + video.getFileName().toString()
+			textChannel.sendMessage(ERROR_EMOJI + "`" + video.getFileName().toString()
 									+ "` does not have Season. Please add Season or move it "
 									+ "manually").queue();
 			try {
@@ -265,7 +277,8 @@ public class DownloadWatcher {
 			} catch (IOException e) {
 				logger.error("Got some sort of IOException");
 				e.printStackTrace();
-				textChannel.sendMessage("Got some sort of IOException please check the logs")
+				textChannel.sendMessage(
+								ERROR_EMOJI + "Got some sort of IOException please check the logs")
 						.queue();
 			}
 			return;
@@ -279,8 +292,8 @@ public class DownloadWatcher {
 			} catch (IOException e) {
 				logger.error("Error while trying to create new Folder.");
 				textChannel.sendMessage(
-						"Something went wrong while trying to create the directory `" + destination
-						+ "`. Please look at the Bot Log.").queue();
+						ERROR_EMOJI + "Something went wrong while trying to create the directory `"
+						+ destination + "`. Please look at the Bot Log.").queue();
 				return;
 			}
 		}
@@ -289,28 +302,30 @@ public class DownloadWatcher {
 			Path target = destination.resolve(destination.getParent().getFileName().toString()
 											  + " - s%1$02de%2$02d.%3$s".formatted(season_number,
 					episode, file_format));
-			logger.info("Moving " + video.getFileName().toString() + " to " + target.getFileName());
-			textChannel.sendMessage(
-					"Moving `" + video.getFileName().toString() + "` as `" + target.getFileName()
-					+ "` to known folder.").queue();
 			Files.move(video, target);
+			logger.info("Moved " + video.getFileName().toString() + " to " + target.getFileName());
+			textChannel.sendMessage(
+					"Moved `" + video.getFileName().toString() + "` as `" + target.getFileName()
+					+ "` to known folder.").queue();
 		} catch (FileAlreadyExistsException e) {
 			logger.warn(video.getFileName().toString() + " is a duplicate File");
-			textChannel.sendMessage(
-							"`" + video.getFileName().toString() + "` is already present please " + "check")
+			textChannel.sendMessage(ERROR_EMOJI + "`" + video.getFileName().toString()
+									+ "` is already present please " + "check")
 					.queue();
 			try {
 				Files.move(video, video.getParent().resolve("_" + video.getFileName()));
 			} catch (IOException e1) {
 				logger.error("Got some sort of IOException");
 				e1.printStackTrace();
-				textChannel.sendMessage("Got some sort of IOException please check the logs")
+				textChannel.sendMessage(
+								ERROR_EMOJI + "Got some sort of IOException please check the logs")
 						.queue();
 			}
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
-			textChannel.sendMessage("Got some sort of IOException please check the logs").queue();
+			textChannel.sendMessage(
+					ERROR_EMOJI + "Got some sort of IOException please check the logs").queue();
 		}
 	}
 }
