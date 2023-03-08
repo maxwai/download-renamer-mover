@@ -124,13 +124,14 @@ public class DownloadWatcher {
 	 */
 	public static void mapAllKnownDirectories() {
 		logger.info("Getting all Subdirectories");
-		try {
-			Files.newDirectoryStream(anime_folder, Files::isDirectory).forEach(
-					subDir -> directories.put(
-							subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
-			Files.newDirectoryStream(series_folder, Files::isDirectory).forEach(
-					subDir -> directories.put(
-							subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+		try (DirectoryStream<Path> anime_folders_stream =
+				Files.newDirectoryStream(anime_folder, Files::isDirectory);
+				DirectoryStream<Path> series_folders_stream =
+						Files.newDirectoryStream(series_folder, Files::isDirectory)) {
+			anime_folders_stream.forEach(subDir -> directories.put(
+					subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
+			series_folders_stream.forEach(subDir -> directories.put(
+					subDir.getFileName().toString().toLowerCase(Locale.ROOT), subDir));
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
