@@ -1,7 +1,12 @@
 package download.watcher;
 
 import java.awt.Color;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -30,6 +35,11 @@ public class DownloadWatcher {
 	 * All Series name mapped to the respective Paths
 	 */
 	public static final Map<String, Path> directories = new HashMap<>();
+	/**
+	 * The Regex to parse the Voe title in the head section
+	 */
+	public static final Pattern voePattern = Pattern.compile(
+			"Watch (.*\\.mp4) - VOE \\| Content Delivery Network \\(CDN\\) & Video Cloud");
 	/**
 	 * The Logger for Log Messages
 	 */
@@ -237,6 +247,48 @@ public class DownloadWatcher {
 					}
 				}
 			} else {
+				if (!name.contains(" ")) {
+					try {
+						HttpURLConnection connection = (HttpURLConnection) new URL(
+								"https://voe.sx/e/" + name.replace(".mp4", "")).openConnection();
+						connection.setRequestMethod("GET");
+						try (InputStream content = connection.getInputStream();
+								BufferedReader in = new BufferedReader(
+										new InputStreamReader(content))) {
+							String line;
+							while ((line = in.readLine()) != null) {
+								if (line.contains("<title>")) {
+									Matcher matcherVoe = voePattern.matcher(line);
+									if (matcherVoe.find()) {
+										final String video_name = matcherVoe.group(1).trim();
+										try {
+											Files.move(video,
+													video.getParent().resolve(video_name));
+											checkDownloadFolder(checkTilde);
+										} catch (IOException e) {
+											logger.error("Got some sort of IOException");
+											e.printStackTrace();
+											textChannel.sendMessage(
+															ERROR_EMOJI
+															+ "Got some sort of IOException please"
+															+ " check the logs")
+													.queue();
+										}
+										return;
+									}
+									break;
+								}
+							}
+						}
+					} catch (IOException e) {
+						logger.error("Got some sort of IOException");
+						e.printStackTrace();
+						textChannel.sendMessage(
+										ERROR_EMOJI + "Got some sort of IOException please check "
+										+ "the logs")
+								.queue();
+					}
+				}
 				logger.error("File did not contain regex");
 				textChannel.sendMessage(ERROR_EMOJI + "`" + name
 										+ "` did not match regex. Please adjust the regex to match"
