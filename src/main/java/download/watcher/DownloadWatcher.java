@@ -223,6 +223,12 @@ public class DownloadWatcher {
 					moveVideo(directories.get(video_name), video, season, episode, file_format);
 					checkDownloadFolder(checkTilde);
 				} else {
+					if (!name.contains(" ")) {
+						if (checkVoe(name, video)) {
+							checkDownloadFolder(checkTilde);
+							return;
+						}
+					}
 					logger.warn("File name \"" + video_name + "\" is not known");
 					try {
 						Files.move(video, video.getParent().resolve("~" + video.getFileName()));
@@ -248,45 +254,9 @@ public class DownloadWatcher {
 				}
 			} else {
 				if (!name.contains(" ")) {
-					try {
-						HttpURLConnection connection = (HttpURLConnection) new URL(
-								"https://voe.sx/e/" + name.replace(".mp4", "")).openConnection();
-						connection.setRequestMethod("GET");
-						try (InputStream content = connection.getInputStream();
-								BufferedReader in = new BufferedReader(
-										new InputStreamReader(content))) {
-							String line;
-							while ((line = in.readLine()) != null) {
-								if (line.contains("<title>")) {
-									Matcher matcherVoe = voePattern.matcher(line);
-									if (matcherVoe.find()) {
-										final String video_name = matcherVoe.group(1).trim();
-										try {
-											Files.move(video,
-													video.getParent().resolve(video_name));
-											checkDownloadFolder(checkTilde);
-										} catch (IOException e) {
-											logger.error("Got some sort of IOException");
-											e.printStackTrace();
-											textChannel.sendMessage(
-															ERROR_EMOJI
-															+ "Got some sort of IOException please"
-															+ " check the logs")
-													.queue();
-										}
-										return;
-									}
-									break;
-								}
-							}
-						}
-					} catch (IOException e) {
-						logger.error("Got some sort of IOException");
-						e.printStackTrace();
-						textChannel.sendMessage(
-										ERROR_EMOJI + "Got some sort of IOException please check "
-										+ "the logs")
-								.queue();
+					if (checkVoe(name, video)) {
+						checkDownloadFolder(checkTilde);
+						return;
 					}
 				}
 				logger.error("File did not contain regex");
@@ -306,6 +276,45 @@ public class DownloadWatcher {
 				}
 			}
 		}
+	}
+	
+	private static boolean checkVoe(String name, Path video) {
+		try {
+			HttpURLConnection connection = (HttpURLConnection) new URL(
+					"https://voe.sx/e/" + name.replace(".mp4", "")).openConnection();
+			connection.setRequestMethod("GET");
+			try (InputStream content = connection.getInputStream();
+					BufferedReader in = new BufferedReader(new InputStreamReader(content))) {
+				String line;
+				while ((line = in.readLine()) != null) {
+					if (line.contains("<title>")) {
+						Matcher matcherVoe = voePattern.matcher(line);
+						if (matcherVoe.find()) {
+							final String video_name = matcherVoe.group(1).trim();
+							try {
+								Files.move(video, video.getParent().resolve(video_name));
+								return true;
+							} catch (IOException e) {
+								logger.error("Got some sort of IOException");
+								e.printStackTrace();
+								textChannel.sendMessage(
+										ERROR_EMOJI + "Got some sort of IOException please"
+										+ " check the logs").queue();
+							}
+						}
+						break;
+					}
+				}
+			}
+		} catch (IOException e) {
+			logger.error("Got some sort of IOException");
+			e.printStackTrace();
+			textChannel.sendMessage(
+							ERROR_EMOJI + "Got some sort of IOException please check " + "the " +
+							"logs")
+					.queue();
+		}
+		return false;
 	}
 	
 	/**
