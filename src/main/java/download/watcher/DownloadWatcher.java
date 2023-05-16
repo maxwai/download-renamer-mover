@@ -223,11 +223,9 @@ public class DownloadWatcher {
 					moveVideo(directories.get(video_name), video, season, episode, file_format);
 					checkDownloadFolder(checkTilde);
 				} else {
-					if (!name.contains(" ")) {
-						if (checkVoe(name, video)) {
-							checkDownloadFolder(checkTilde);
-							return;
-						}
+					if (checkVoe(name, video)) {
+						checkDownloadFolder(checkTilde);
+						return;
 					}
 					logger.warn("File name \"" + video_name + "\" is not known");
 					try {
@@ -253,11 +251,9 @@ public class DownloadWatcher {
 					}
 				}
 			} else {
-				if (!name.contains(" ")) {
-					if (checkVoe(name, video)) {
-						checkDownloadFolder(checkTilde);
-						return;
-					}
+				if (checkVoe(name, video)) {
+					checkDownloadFolder(checkTilde);
+					return;
 				}
 				logger.error("File did not contain regex");
 				textChannel.sendMessage(ERROR_EMOJI + "`" + name
@@ -279,6 +275,10 @@ public class DownloadWatcher {
 	}
 	
 	private static boolean checkVoe(String name, Path video) {
+		if (name.contains(" ") || name.chars().filter(ch -> ch == '.').count() != 1
+			|| !name.endsWith(".mp4")) {
+			return false;
+		}
 		try {
 			HttpURLConnection connection = (HttpURLConnection) new URL(
 					"https://voe.sx/e/" + name.replace(".mp4", "")).openConnection();
