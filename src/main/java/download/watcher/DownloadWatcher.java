@@ -275,12 +275,12 @@ public class DownloadWatcher {
 	}
 	
 	private static boolean checkVoe(String name, Path video) {
-		if (!name.startsWith("voe:") && (name.contains(" ")
+		if (!name.startsWith("voe_") && (name.contains(" ")
 										 || name.chars().filter(ch -> ch == '.').count() != 1
 										 || !name.endsWith(".mp4"))) {
 			return false;
 		}
-		if (name.startsWith("voe:")) {
+		if (name.startsWith("voe_")) {
 			name = name.substring(5);
 		}
 		try {
