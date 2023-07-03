@@ -275,9 +275,13 @@ public class DownloadWatcher {
 	}
 	
 	private static boolean checkVoe(String name, Path video) {
-		if (name.contains(" ") || name.chars().filter(ch -> ch == '.').count() != 1
-			|| !name.endsWith(".mp4")) {
+		if (!name.startsWith("voe:") && (name.contains(" ")
+										 || name.chars().filter(ch -> ch == '.').count() != 1
+										 || !name.endsWith(".mp4"))) {
 			return false;
+		}
+		if (name.startsWith("voe:")) {
+			name = name.substring(5);
 		}
 		try {
 			HttpURLConnection connection = (HttpURLConnection) new URL(
