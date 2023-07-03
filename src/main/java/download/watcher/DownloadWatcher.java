@@ -281,7 +281,7 @@ public class DownloadWatcher {
 			return false;
 		}
 		if (name.startsWith("voe_")) {
-			name = name.substring(5);
+			name = name.substring(4);
 		}
 		try {
 			HttpURLConnection connection = (HttpURLConnection) new URL(
