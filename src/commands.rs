@@ -1,4 +1,6 @@
-use poise::serenity_prelude as serenity;
+use std::time::SystemTime;
+
+use poise::{say_reply, serenity_prelude as serenity};
 
 use crate::{Context, Error};
 
@@ -21,15 +23,18 @@ pub async fn help(
     Ok(())
 }
 
-/// Displays your or another user's account creation date
+/// ping command
 #[poise::command(slash_command, prefix_command)]
-pub async fn age(
-    ctx: Context<'_>,
-    #[description = "Selected user"] user: Option<serenity::User>,
-) -> Result<(), Error> {
-    let u = user.as_ref().unwrap_or_else(|| ctx.author());
-    let response = format!("{}'s account was created at {}", u.name, u.created_at());
-    ctx.say(response).await?;
+pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
+    let response = "Pong!";
+    let now = SystemTime::now();
+    let reply_message = say_reply(ctx, response).await?;
+    reply_message.edit(ctx, |builder| {
+        builder.content(match now.elapsed() {
+            Ok(elapsed) => {format!("Pong: {} ms", elapsed.as_millis())},
+            Err(_) => "Pong: could not calculate time difference".to_owned(),
+        })
+    }).await?;
     Ok(())
 }
 
@@ -37,13 +42,13 @@ pub async fn age(
 #[poise::command(slash_command, prefix_command)]
 pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
     match ctx.guild_id() {
-        None => {
-            ctx.say("Command only possible in Guild").await?;
-        }
+        None => say_reply(ctx, "Command only possible in Guild"),
         Some(guild) => {
             poise::builtins::register_in_guild(ctx, &ctx.framework().options().commands, guild)
                 .await?;
+            say_reply(ctx, "Reloaded slash commands")
         }
-    };
+    }
+    .await?;
     Ok(())
 }
