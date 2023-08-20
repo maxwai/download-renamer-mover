@@ -5,7 +5,7 @@ use std::time::SystemTime;
 
 use poise::{say_reply, serenity_prelude as serenity};
 
-use crate::{Context, Error};
+use crate::bot::{Context, Error};
 
 /// Show this help menu
 #[poise::command(prefix_command, track_edits, slash_command)]
@@ -62,5 +62,11 @@ pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
     say_reply(ctx, "Stopping bot").await?;
     sleep(time::Duration::from_secs(1));
     exit(0);
+}
+
+/// Reloads all directories
+#[poise::command(slash_command, prefix_command)]
+pub async fn reload(ctx: Context<'_>) -> Result<(), Error> {
+    // TODO: Implement
     Ok(())
 }
