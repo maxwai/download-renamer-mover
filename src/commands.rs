@@ -1,4 +1,6 @@
+use core::time;
 use std::process::exit;
+use std::thread::sleep;
 use std::time::SystemTime;
 
 use poise::{say_reply, serenity_prelude as serenity};
@@ -58,6 +60,7 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command, prefix_command)]
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
     say_reply(ctx, "Stopping bot").await?;
+    sleep(time::Duration::from_secs(1));
     exit(0);
     Ok(())
 }
