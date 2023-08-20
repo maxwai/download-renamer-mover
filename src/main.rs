@@ -14,10 +14,10 @@ async fn main() {
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
-                commands::age(),
                 commands::help(),
                 commands::reload_slash(),
                 commands::ping(),
+                commands::stop(),
             ],
             allowed_mentions: Some({
                 let mut f = serenity::CreateAllowedMentions::default();
@@ -39,9 +39,10 @@ async fn main() {
         .intents(
             serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT,
         )
-        .setup(|_ctx, _ready, _framework| {
+        .setup(|ctx, _ready, _framework| {
             Box::pin(async move {
                 println!("Logged in as {}", _ready.user.name);
+                ctx.set_activity(serenity::Activity::watching("downloads")).await;
                 //poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {})
             })
