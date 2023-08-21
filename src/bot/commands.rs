@@ -1,10 +1,15 @@
 use core::time;
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::thread::sleep;
 use std::time::SystemTime;
 
-#[allow(unused_imports)]
-use poise::{say_reply, serenity_prelude as serenity};
+use futures::{Stream, StreamExt};
+use log::{error, info, warn};
+use poise::serenity_prelude as serenity;
+use serenity::{AttachmentType, futures};
 
+use crate::{download_watcher, xml};
 use crate::bot::{Context, Error};
 
 /// Show this help menu
@@ -31,7 +36,7 @@ pub async fn help(
 pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     let response = "Pong!";
     let now = SystemTime::now();
-    let reply_message = say_reply(ctx, response).await?;
+    let reply_message = ctx.say(response).await?;
     reply_message
         .edit(ctx, |builder| {
             builder.content(match now.elapsed() {
@@ -49,11 +54,11 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command, prefix_command)]
 pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
     match ctx.guild_id() {
-        None => say_reply(ctx, "Command only possible in Guild"),
+        None => ctx.say("Command only possible in Guild"),
         Some(guild) => {
             poise::builtins::register_in_guild(ctx, &ctx.framework().options().commands, guild)
                 .await?;
-            say_reply(ctx, "Reloaded slash commands")
+            ctx.say("Reloaded slash commands")
         }
     }
     .await?;
@@ -63,7 +68,7 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
 /// Stops the bot
 #[poise::command(slash_command, prefix_command, aliases("shutdown"))]
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
-    say_reply(ctx, "Stopping bot").await?;
+    ctx.say("Stopping bot").await?;
     sleep(time::Duration::from_secs(1));
     ctx.framework()
         .shard_manager
@@ -76,7 +81,95 @@ pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
 
 /// Reloads all directories
 #[poise::command(slash_command, prefix_command)]
-pub async fn reload(_: Context<'_>) -> Result<(), Error> {
-    // TODO: Implement
+pub async fn reload(ctx: Context<'_>) -> Result<(), Error> {
+    info!("Reloading all Directories");
+    if let Some(tx) = &ctx.data().tx {
+        match tx.try_send(download_watcher::SIGNAL_NEW_MAPPING) {
+            Ok(_) => ctx.say("Reloaded all Directories"),
+            Err(why) => {
+                error!("Could not reload Directories {:?}", why);
+                ctx.say("Cloudn't reload Directories, try again later.")
+            }
+        }.await?;
+    }
+    Ok(())
+}
+
+/// Parent Map Command
+#[poise::command(slash_command, subcommands("all", "new"))]
+pub async fn map(_: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+/// Will show all Mappings
+#[poise::command(slash_command, prefix_command)]
+pub async fn all(ctx: Context<'_>) -> Result<(), Error> {
+    let mut mappings: HashMap<String, Vec<&str>> = HashMap::new();
+    let reverse_mapping = xml::get_mappings();
+    reverse_mapping.iter().for_each(|(to_replace, og)| {
+        if let Some(list) = mappings.get_mut(og) {
+            list.push(to_replace);
+        } else {
+            mappings.insert(og.to_string(), vec![to_replace]);
+        }
+    });
+    let output = mappings
+        .iter()
+        .map(|(og, list)| {
+            format!(
+                "{} : {}\n",
+                og,
+                (*list).join(format!("\n{}", " ".repeat(og.len() + 3)).as_str())
+            )
+        })
+        .reduce(|x, x1| format!("{}{}", x, x1))
+        .unwrap_or("No mappings".to_string());
+    ctx.send(|builder| {
+        builder
+            .content("Here are all the Mappings")
+            .attachment(AttachmentType::Bytes {
+                data: Cow::from(output.as_bytes()),
+                filename: "mappings.txt".to_string(),
+            })
+    })
+    .await?;
+    Ok(())
+}
+
+async fn autocomplete_alt<'a>(
+    _ctx: Context<'_>,
+    partial: &'a str,
+) -> impl Stream<Item = String> + 'a {
+    futures::stream::iter(download_watcher::get_current_missing_mappings())
+        .filter(move |name| futures::future::ready(name.starts_with(partial)))
+        .map(|name| name.to_string())
+}
+
+/// Will add a new Mapping to the Bot
+#[poise::command(slash_command)]
+pub async fn new(
+    ctx: Context<'_>,
+    #[description = "alternative name"]
+    #[autocomplete = "autocomplete_alt"]
+    mut alt: String,
+    #[description = "series name on server"]
+    #[autocomplete = "autocomplete_alt"]
+    mut og: String,
+) -> Result<(), Error> {
+    alt = alt.to_lowercase();
+    og = og.to_lowercase();
+    if download_watcher::get_directories().contains(&og) {
+        info!("Adding new Mapping");
+        let message = ctx.say("Done");
+        xml::add_mappings(alt, og);
+        if let Some(tx) = &ctx.data().tx {
+            tx.send(download_watcher::SIGNAL_NEW_MAPPING)?;
+        }
+        message.await?;
+    } else {
+        warn!("Mapping could not be added");
+        ctx.say(format!("Don't know `{}` please try again.", og))
+            .await?;
+    }
     Ok(())
 }

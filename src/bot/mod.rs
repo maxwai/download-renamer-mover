@@ -1,40 +1,20 @@
+use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 
-use crate::xml;
+use crate::{download_watcher, xml};
 use log::info;
-use poise::serenity_prelude::CacheHttp;
-use poise::{async_trait, serenity_prelude as serenity};
+use poise::serenity_prelude as serenity;
+use serenity::CacheHttp;
 
 mod commands;
 
 /// User data, which is stored and accessible in all command invocations
-pub struct Data {}
-
-type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, Data, Error>;
-
-struct Handler;
-
-#[async_trait]
-impl serenity::EventHandler for Handler {
-    async fn message(&self, context: serenity::Context, msg: serenity::Message) {
-        if msg.content.starts_with("!") {
-            info!(
-                "Received message from {} in channel {}: {}",
-                msg.author.name,
-                msg.channel_id
-                    .name(context.cache().unwrap())
-                    .await
-                    .unwrap_or_else(|| { "Unknown".to_string() }),
-                msg.content.to_string()
-            );
-        }
-    }
-
-    async fn ready(&self, _: serenity::Context, ready: serenity::Ready) {
-        info!("{} is connected!", ready.user.name);
-    }
+pub struct Data {
+    tx: Option<SyncSender<u8>>,
 }
+
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 pub async fn entrypoint() {
     info!("Starting the bot");
@@ -45,6 +25,7 @@ pub async fn entrypoint() {
                 commands::reload_slash(),
                 commands::ping(),
                 commands::stop(),
+                commands::map(),
             ],
             allowed_mentions: Some({
                 let mut f = serenity::CreateAllowedMentions::default();
@@ -77,12 +58,16 @@ pub async fn entrypoint() {
         .intents(
             serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT,
         )
-        .setup(|ctx, _ready, _framework| {
+        .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 info!("Logged in as {}", _ready.user.name);
                 ctx.set_activity(serenity::Activity::watching("downloads"))
                     .await;
-                Ok(Data {})
+                match download_watcher::entrypoint(ctx) {
+                    None => framework.shard_manager().lock().await.shutdown_all().await,
+                    Some(tx) => return Ok(Data { tx: Some(tx) }),
+                }
+                Ok(Data { tx: None })
             })
         });
 
