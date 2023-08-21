@@ -3,19 +3,18 @@ appenders:
   stdout:
     kind: console
     encoder:
-      pattern: "{d(%Y-%m-%d %H:%M:%S.%3f)} {T:<34.34} {M:<15.15} {l:<6} {m}{n}"
+      pattern: "{d(%Y-%m-%d %H:%M:%S.%3f)} {T:<21.21} {M:<28.28} {l:<6} {m}{n}"
   file:
     kind: rolling_file
     path: "appdata/logs/app.log"
     encoder:
-      pattern: "{d(%Y-%m-%d %H:%M:%S.%3f)} {T:<34.34} {M:<15.15} {l:<6} {m}{n}"
+      pattern: "{d(%Y-%m-%d %H:%M:%S.%3f)} {T:<21.21} {M:<28.28} {l:<6} {m}{n}"
     policy:
       trigger:
         kind: size
         limit: 10MB
       roller:
         kind: delete
-
 root:
   level: info
   appenders:
