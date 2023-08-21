@@ -52,40 +52,12 @@ pub async fn entrypoint() {
             edit_tracker: Some(poise::EditTracker::for_timespan(Duration::from_secs(3600))),
             ..Default::default()
         },
-        pre_command : |ctx| {
+        pre_command: |ctx| {
             Box::pin(async move {
-                match ctx {
-                    Context::Application(_) => {info!("Received slash Command from {} in channel {}: /{}",
+                info!("Received Command from {} in channel {}: {}",
                         ctx.author().name,
                         ctx.channel_id().name(ctx.cache().unwrap()).await.unwrap_or_else(|| {"Unknown".to_string()}),
-                        ctx.invoked_command_name());}
-                    Context::Prefix(_) => {}
-            }
-            })
-        },
-        event_handler: |ctx, event, framework, data| {
-            Box::pin(async move {
-                #[allow(unused_variables)] let temp = ctx;
-                #[allow(unused_variables)] let temp2: poise::dispatch::FrameworkContext<Data, _> = framework;
-                #[allow(unused_variables)] let temp4 = data;
-                if let poise::event::Event::Message { new_message } = event {
-                    if new_message.content.starts_with(framework
-                        .options()
-                        .prefix_options
-                        .prefix
-                        .as_ref()
-                        .unwrap()
-                        .as_str()) {
-                        info!("Received message from {} in channel {}: {}",
-                                new_message.author.name,
-                                new_message.channel_id.name(ctx.cache().unwrap())
-                                    .await.unwrap_or_else(|| {"Unknown".to_string()}),
-                                new_message.content);
-                    }
-                } else {
-                    //info!("{:?}", event.name());
-                }
-                Ok(())
+                        ctx.invocation_string());
             })
         },
         ..Default::default()
