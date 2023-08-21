@@ -1,8 +1,8 @@
 use core::time;
-use std::process::exit;
 use std::thread::sleep;
 use std::time::SystemTime;
 
+#[allow(unused_imports)]
 use poise::{say_reply, serenity_prelude as serenity};
 
 use crate::bot::{Context, Error};
@@ -57,16 +57,17 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Stops the bot
-#[poise::command(slash_command, prefix_command)]
+#[poise::command(slash_command, prefix_command, aliases("shutdown"))]
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
     say_reply(ctx, "Stopping bot").await?;
     sleep(time::Duration::from_secs(1));
-    exit(0);
+    ctx.framework().shard_manager.lock().await.shutdown_all().await;
+    Ok(())
 }
 
 /// Reloads all directories
 #[poise::command(slash_command, prefix_command)]
-pub async fn reload(ctx: Context<'_>) -> Result<(), Error> {
+pub async fn reload(_: Context<'_>) -> Result<(), Error> {
     // TODO: Implement
     Ok(())
 }

@@ -82,7 +82,7 @@ pub async fn entrypoint() {
                                 new_message.content);
                     }
                 } else {
-                    info!("{:?}", event.name());
+                    //info!("{:?}", event.name());
                 }
                 Ok(())
             })
