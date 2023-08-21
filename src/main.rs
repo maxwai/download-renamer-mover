@@ -2,6 +2,7 @@ use log::info;
 use log4rs;
 
 pub mod bot;
+pub mod xml;
 
 #[allow(unreachable_code)]
 #[tokio::main]
