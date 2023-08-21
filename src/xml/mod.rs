@@ -5,8 +5,8 @@ use std::process::exit;
 use std::str::FromStr;
 
 use log::{error, info, warn};
-use xmltree::{Element, XMLNode};
 use xmltree::XMLNode::Text;
+use xmltree::{Element, XMLNode};
 
 const DUMMY_CONTENT: &str = r##"
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -140,7 +140,11 @@ pub fn get_mappings() -> HashMap<String, String> {
     }
 }
 
-pub fn add_mappings<S, U>(old: S, og: U) where S: Into<String>, U: Into<String> {
+pub fn add_mappings<S, U>(old: S, og: U)
+where
+    S: Into<String>,
+    U: Into<String>,
+{
     let mut document = get_document();
     let mut temp: Element;
     let mappings: &mut Element = match document.get_mut_child(MAPPINGS_TAG) {
@@ -148,12 +152,14 @@ pub fn add_mappings<S, U>(old: S, og: U) where S: Into<String>, U: Into<String> 
             temp = Element::new(MAPPINGS_TAG);
             &mut temp
         }
-        Some(element) => element
+        Some(element) => element,
     };
     let text = Text(og.into());
 
     let mut mapping = Element::new(MAPPING_SINGLE_TAG);
-    mapping.attributes.insert(ALTERNATIVE_ATTRIBUTE_TAG.to_string(), old.into());
+    mapping
+        .attributes
+        .insert(ALTERNATIVE_ATTRIBUTE_TAG.to_string(), old.into());
     mapping.children = vec![text];
 
     let mut children = mappings.children.to_vec();

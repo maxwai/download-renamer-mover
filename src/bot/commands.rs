@@ -32,12 +32,16 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     let response = "Pong!";
     let now = SystemTime::now();
     let reply_message = say_reply(ctx, response).await?;
-    reply_message.edit(ctx, |builder| {
-        builder.content(match now.elapsed() {
-            Ok(elapsed) => {format!("Pong: {} ms", elapsed.as_millis())},
-            Err(_) => "Pong: could not calculate time difference".to_owned(),
+    reply_message
+        .edit(ctx, |builder| {
+            builder.content(match now.elapsed() {
+                Ok(elapsed) => {
+                    format!("Pong: {} ms", elapsed.as_millis())
+                }
+                Err(_) => "Pong: could not calculate time difference".to_owned(),
+            })
         })
-    }).await?;
+        .await?;
     Ok(())
 }
 
@@ -61,7 +65,12 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
     say_reply(ctx, "Stopping bot").await?;
     sleep(time::Duration::from_secs(1));
-    ctx.framework().shard_manager.lock().await.shutdown_all().await;
+    ctx.framework()
+        .shard_manager
+        .lock()
+        .await
+        .shutdown_all()
+        .await;
     Ok(())
 }
 
