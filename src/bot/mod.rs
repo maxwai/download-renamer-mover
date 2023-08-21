@@ -3,6 +3,7 @@ use std::time::Duration;
 use log::info;
 use poise::{async_trait, serenity_prelude as serenity};
 use poise::serenity_prelude::CacheHttp;
+use crate::xml;
 
 mod commands;
 
@@ -88,7 +89,7 @@ pub async fn entrypoint() {
             })
         },
         ..Default::default()
-    }).token(std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN")).intents(
+    }).token(xml::get_bot_token()).intents(
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT,
     ).setup(|ctx, _ready, _framework| {
         Box::pin(async move {
