@@ -1,6 +1,7 @@
 use core::time;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::SystemTime;
@@ -70,6 +71,11 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command, prefix_command, aliases("shutdown"))]
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
     ctx.say("Stopping bot").await?;
+    if let Some(tx) = &ctx.data().tx {
+        if let Err(why) = tx.try_send(download_watcher::SIGNAL_STOP) {
+            error!("Could not stop Thread {:?}", why);
+        }
+    }
     sleep(time::Duration::from_secs(1));
     ctx.framework()
         .shard_manager
@@ -190,6 +196,9 @@ pub async fn new(
         {
             info!("Adding new Mapping");
             let message = ctx.say("Done".to_string());
+            {
+                shared_data.lock().unwrap().missing_mappings.retain(|x| x.deref() != alt);
+            }
             xml::add_mappings(alt, og);
             if let Some(tx) = &ctx.data().tx {
                 tx.send(download_watcher::SIGNAL_NEW_MAPPING)?;

@@ -1,23 +1,30 @@
-use std::{env, thread};
+extern crate regex;
+extern crate reqwest;
+
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, SyncSender};
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::Duration;
+use std::{env, thread};
 
-use log::{error, info};
+use log::{error, info, warn};
 use poise::serenity_prelude as serenity;
+use regex::Regex;
 use serenity::{ChannelId, Context};
 
 use crate::xml;
 
 pub const SIGNAL_NEW_MAPPING: u8 = 1;
 pub const SIGNAL_RELOAD: u8 = 2;
+pub const SIGNAL_STOP: u8 = 3;
+
+const ERROR_EMOJI: &str = ":x: ";
 
 pub struct ThreadInfos {
     pub missing_mappings: Vec<String>,
-    pub directories: HashMap<String, PathBuf>,
-    pub og_directories: HashMap<String, PathBuf>
+    pub og_directories: HashMap<String, PathBuf>,
 }
 
 pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
@@ -61,10 +68,403 @@ pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
     Some((anime_folder, series_folder, download_folder))
 }
 
-pub fn run(_ctx: Context, _anime_folder: PathBuf, _series_folder: PathBuf, _download_folder: PathBuf, _rx: Receiver<u8>, _shared_thread_infos: Arc<Mutex<ThreadInfos>>) {
-    let _channel = ChannelId(xml::get_main_channel());
-    // TODO: rcv(SIGNAL_NEW_MAPPING) == new mapping -> reload mappings from xml
-    // TODO: rcv(SIGNAL_RELOAD) == reload directories
+#[tokio::main(flavor = "current_thread")]
+pub async fn run(
+    ctx: Context,
+    anime_folder: PathBuf,
+    series_folder: PathBuf,
+    download_folder: PathBuf,
+    rx: Receiver<u8>,
+    shared_thread_infos: Arc<Mutex<ThreadInfos>>,
+) {
+    const WAIT_TIME_IN_SEC: u64 = 60;
+
+    let channel = ChannelId(xml::get_main_channel());
+    let mut directories: HashMap<String, PathBuf> = HashMap::new();
+    let mut to_ignore: Vec<PathBuf> = Vec::new();
+    get_xml_mappings(&mut directories, &shared_thread_infos);
+    get_known_directories(&anime_folder, &series_folder, &shared_thread_infos);
+    loop {
+        if !check_download_folder(
+            &directories,
+            &mut to_ignore,
+            &shared_thread_infos,
+            &download_folder,
+            &ctx,
+            &channel,
+        )
+        .await
+        {
+            match rx.recv_timeout(Duration::from_secs(WAIT_TIME_IN_SEC)) {
+                Ok(signal) => match signal {
+                    SIGNAL_STOP => return,
+                    SIGNAL_RELOAD => {
+                        get_known_directories(&anime_folder, &series_folder, &shared_thread_infos);
+                        get_xml_mappings(&mut directories, &shared_thread_infos);
+                        shared_thread_infos.lock().unwrap().missing_mappings.clear();
+                    }
+                    SIGNAL_NEW_MAPPING => get_xml_mappings(&mut directories, &shared_thread_infos),
+                    _ => error!("Got unknown signal code: {}", signal),
+                },
+                Err(_) => {} // timeout
+            }
+        }
+    }
+}
+
+fn get_known_directories(
+    anime_folder: &PathBuf,
+    series_folder: &PathBuf,
+    shared_thread_infos: &Arc<Mutex<ThreadInfos>>,
+) {
+    traverse_directory(anime_folder, shared_thread_infos);
+    traverse_directory(series_folder, shared_thread_infos);
+}
+
+fn traverse_directory(folder: &PathBuf, shared_thread_infos: &Arc<Mutex<ThreadInfos>>) {
+    std::fs::read_dir(folder)
+        .unwrap()
+        .map(|entry| entry.as_ref().unwrap().path())
+        .filter(|path| path.is_dir())
+        .for_each(|dir| {
+            shared_thread_infos.lock().unwrap().og_directories.insert(
+                dir.file_name().unwrap().to_str().unwrap().to_lowercase(),
+                dir,
+            );
+        });
+}
+
+fn get_xml_mappings(
+    directories: &mut HashMap<String, PathBuf>,
+    shared_thread_infos: &Arc<Mutex<ThreadInfos>>,
+) {
+    let new_mappings = xml::get_mappings();
+    directories.clear();
+    new_mappings.iter().for_each(|(&ref alt, og)| {
+        let mutex_share = shared_thread_infos.lock().unwrap();
+        directories.insert(
+            alt.to_string(),
+            mutex_share.og_directories.get(og).unwrap().to_path_buf(),
+        );
+    })
+}
+
+async fn check_download_folder(
+    directories: &HashMap<String, PathBuf>,
+    to_ignore: &mut Vec<PathBuf>,
+    shared_thread_infos: &Arc<Mutex<ThreadInfos>>,
+    download_folder: &PathBuf,
+    ctx: &Context,
+    channel: &ChannelId,
+) -> bool {
+    let pattern = Regex::new(r"(?m)^(.*?)((s\d+)[- ]?)?(e\d+).*?(.*)?\.([a-zA-Z0-9]*)").unwrap();
+
+    let mut new_to_ignore: Vec<PathBuf> = Vec::new();
+
+    let mut files: Vec<PathBuf> = Vec::new();
+    for file in std::fs::read_dir(download_folder)
+        .unwrap()
+        .map(|entry| entry.as_ref().unwrap().path())
+        .filter(|path| path.is_file())
+        .filter(|file_path| match file_path.extension() {
+            None => false,
+            Some(extension) => extension == "mp4" || extension == "mkv" || extension == "avi",
+        })
+        .filter(|file_path| {
+            if to_ignore.contains(file_path) {
+                new_to_ignore.push((*file_path).clone());
+                return false;
+            }
+            return true;
+        })
+    {
+        files.push(file);
+    }
+    to_ignore.clear();
+    to_ignore.append(&mut new_to_ignore);
+
+    let mut local_files: Vec<String> = Vec::new();
+
+    for file in files.clone() {
+        let name = match file.file_name().unwrap().to_str() {
+            None => continue,
+            Some(string) => string,
+        };
+        match pattern.captures(name) {
+            None => {}
+            Some(captures) => {
+                let temp_video_name = captures
+                    .get(1)
+                    .unwrap()
+                    .as_str()
+                    .replace("\\.", " ")
+                    .replace("-", " ");
+                let video_name = temp_video_name.trim().to_string();
+                local_files.push(video_name);
+            }
+        }
+    }
+    {
+        shared_thread_infos
+            .lock()
+            .unwrap()
+            .missing_mappings
+            .retain(|name| local_files.contains(name));
+    }
+
+    'file_loop: for file in files {
+        let name = match file.file_name().unwrap().to_str() {
+            None => {
+                error!("File name not UTF-8: {}", file.display());
+                let _ = channel
+                    .say(
+                        ctx,
+                        format!("{} File name not UTF-8: {}", ERROR_EMOJI, file.display()),
+                    )
+                    .await;
+                return false;
+            }
+            Some(string) => string,
+        };
+        match pattern.captures(name) {
+            None => {
+                if !check_voe(name, &file, ctx, channel).await {
+                    warn!("File did not contain regex");
+                    let _ = channel
+                        .say(
+                            ctx,
+                            format!("{} `{}` did not match regex. Please adjust regex to match file name",
+                                    ERROR_EMOJI, file.display()),
+                        )
+                        .await;
+                    to_ignore.push(file);
+                } else {
+                    return true;
+                }
+            }
+            Some(captures) => {
+                let temp_video_name = captures
+                    .get(1)
+                    .unwrap()
+                    .as_str()
+                    .replace("\\.", " ")
+                    .replace("-", " ");
+                let video_name = temp_video_name.trim();
+                let season = match captures.get(3).map(|capture| capture.as_str()) {
+                    None => {
+                        let _ = channel.say(
+                            ctx,
+                            format!("{} `{}` does not have a Season. Please add a Season or move it manually", ERROR_EMOJI, name)
+                        ).await;
+                        to_ignore.push(file);
+                        continue 'file_loop;
+                    }
+                    Some(season) => season.parse::<i32>().unwrap(),
+                };
+                let episode = captures.get(4).unwrap().as_str()[1..]
+                    .parse::<i32>()
+                    .unwrap();
+                // group 5 is all the not needed information between episode number and file ending
+                let file_format = captures.get(6).unwrap().as_str();
+
+                {
+                    if shared_thread_infos
+                        .lock()
+                        .unwrap()
+                        .missing_mappings
+                        .contains(&video_name.to_string())
+                    {
+                        continue 'file_loop;
+                    }
+                }
+
+                match directories.get(video_name) {
+                    Some(video_path) => {
+                        move_video(
+                            video_path,
+                            &file,
+                            season,
+                            episode,
+                            file_format,
+                            ctx,
+                            channel,
+                            shared_thread_infos,
+                        )
+                        .await;
+                    }
+                    None => {
+                        let mut mutex_share = shared_thread_infos.lock().unwrap();
+                        match mutex_share.og_directories.get(video_name) {
+                            Some(video_path) => {
+                                move_video(
+                                    video_path,
+                                    &file,
+                                    season,
+                                    episode,
+                                    file_format,
+                                    ctx,
+                                    channel,
+                                    shared_thread_infos,
+                                )
+                                .await;
+                            }
+                            None => {
+                                if !check_voe(name, &file, ctx, channel).await {
+                                    warn!("File name \"{}\" is not known", video_name);
+                                    mutex_share.missing_mappings.push(video_name.to_string());
+                                    let _ = channel.send_message(ctx, |builder| {
+                                        builder.embed(|embed_builder| {
+                                            embed_builder.field(
+                                                "Please add a Mapping with following command:",
+                                                format!("`/map new alt:{} og:<series name on the server>`", video_name),
+                                                false)
+                                        })
+                                    }).await;
+                                } else {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
+    return false;
+}
+
+async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelId) -> bool {
+    let voe_pattern = Regex::new(
+        r"(?m)Watch (.*\\.mp4) - VOE \\| Content Delivery Network \\(CDN\\) & Video Cloud",
+    )
+    .unwrap();
+    let mut local_name = name.clone();
+    if !local_name.starts_with("voe_")
+        && (local_name.contains(" ")
+            || local_name.chars().filter(|ch| *ch == '.').count() != 1
+            || !local_name.ends_with(".mp4"))
+    {
+        return false;
+    }
+    if local_name.starts_with("voe_") {
+        local_name = &local_name[4..];
+    }
+
+    match reqwest::get(format!(
+        "https://voe.sx/e/{}",
+        local_name.replace(".mp4", "")
+    ))
+    .await
+    {
+        Ok(response) => {
+            for line in response.text().await.unwrap().split("\n") {
+                if line.contains("<title>") {
+                    if let Some(captures) = voe_pattern.captures(line) {
+                        let video_name = captures.get(1).unwrap().as_str().trim();
+                        std::fs::rename(file, file.parent().unwrap().join(video_name)).unwrap();
+                        return true;
+                    }
+                    break;
+                }
+            }
+        }
+        Err(why) => {
+            error!("{:?}", why);
+            let _ = channel
+                .say(
+                    ctx,
+                    format!(
+                        "{} Got some kind of error while trying to connect to voe, check the logs",
+                        ERROR_EMOJI
+                    ),
+                )
+                .await;
+            return false;
+        }
+    };
+
+    return false;
+}
+
+async fn move_video(
+    destination: &PathBuf,
+    source: &PathBuf,
+    season: i32,
+    episode: i32,
+    file_format: &str,
+    ctx: &Context,
+    channel: &ChannelId,
+    shared_thread_infos: &Arc<Mutex<ThreadInfos>>,
+) {
+    let season_destination = destination.join(format!("Staffel {:02}", season));
+    if !season_destination.is_dir() {
+        if let Err(why) = std::fs::create_dir(season_destination.clone()) {
+            error!("{:?}", why);
+            let _ = channel
+                .say(
+                    ctx,
+                    format!(
+                        "{} Something went wrong while trying to create the directory `{}`. Please look at the logs",
+                        ERROR_EMOJI, season_destination.display()
+                    ),
+                )
+                .await;
+        }
+    }
+
+    let target = season_destination.join(format!(
+        "{} - s{:02}e{:02}.{}",
+        destination.to_str().unwrap(),
+        season,
+        episode,
+        file_format
+    ));
+    if target.is_file() {
+        warn!(
+            "{} is a duplicate file",
+            source.file_name().unwrap().to_str().unwrap()
+        );
+        shared_thread_infos.lock().unwrap().missing_mappings.push(
+            destination
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        );
+        return;
+    }
+    match std::fs::rename(source, target.clone()) {
+        Ok(_) => {
+            info!(
+                "Moved {} to {}",
+                source.file_name().unwrap().to_str().unwrap(),
+                target.file_name().unwrap().to_str().unwrap()
+            );
+            let _ = channel
+                .say(
+                    ctx,
+                    format!(
+                        "Moved `{}` as `{}` to known folder.",
+                        source.file_name().unwrap().to_str().unwrap(),
+                        target.file_name().unwrap().to_str().unwrap()
+                    ),
+                )
+                .await;
+        }
+        Err(why) => {
+            error!("{:?}", why);
+            let _ = channel
+                .say(
+                    ctx,
+                    format!(
+                        "{} Something went wrong while trying to move the file `{}`. Please look at the logs",
+                        ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap()
+                    ),
+                )
+                .await;
+        }
+    };
 }
 
 pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfos>>)> {
@@ -85,13 +485,19 @@ pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfo
 
     let shared_thread_infos = Arc::new(Mutex::new(ThreadInfos {
         missing_mappings: Vec::new(),
-        directories: HashMap::new(),
-        og_directories: HashMap::new()
+        og_directories: HashMap::new(),
     }));
 
     let infos_for_thread = Arc::clone(&shared_thread_infos);
     thread::spawn(move || {
-        run(ctx1, anime_folder, series_folder, download_folder, rx, infos_for_thread);
+        run(
+            ctx1,
+            anime_folder,
+            series_folder,
+            download_folder,
+            rx,
+            infos_for_thread,
+        );
     });
     return Some((tx, shared_thread_infos));
 }
