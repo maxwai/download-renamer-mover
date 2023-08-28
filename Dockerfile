@@ -23,6 +23,10 @@ FROM debian:bullseye-slim
 
 WORKDIR /download-renamer-mover
 
+#RUN apt-get update && apt-get install -y extra-runtime-dependencies && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
 # initialize user as needed
 RUN useradd -u 1001 -s /bin/sh abc
 
@@ -37,5 +41,8 @@ COPY ./log4rs.yml .
 
 # copy the build artifact from the build stage
 COPY --from=builder /usr/local/cargo/bin/download-renamer-mover /usr/local/bin/download-renamer-mover
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs
 
 ENTRYPOINT ./entrypoint.sh
