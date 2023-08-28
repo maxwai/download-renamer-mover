@@ -16,17 +16,25 @@ use serenity::{ChannelId, Context};
 
 use crate::xml;
 
+/// The signal the Bots sends when a new mapping was added
 pub const SIGNAL_NEW_MAPPING: u8 = 1;
+/// The signal the Bots sends when the folders should be reloaded
 pub const SIGNAL_RELOAD: u8 = 2;
+/// The signal the Bots send to tell the Thread to Stop
 pub const SIGNAL_STOP: u8 = 3;
 
+/// The emoji to prepend when an error occurs
 const ERROR_EMOJI: &str = ":x: ";
 
+/// Struct containing shared Objects
 pub struct ThreadInfos {
+    /// The Mappings that need to be added
     pub missing_mappings: Vec<String>,
+    /// The Directories that are present and known
     pub og_directories: HashMap<String, PathBuf>,
 }
 
+/// Will get the necessary Paths to start the Download Watcher or None
 pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
     const DOWNLOAD_FOLDER_NAME: &str = "Download";
     const SHARED_VIDEO_FOLDER_NAME: &str = "Shared Video";
@@ -68,8 +76,9 @@ pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
     Some((anime_folder, series_folder, download_folder))
 }
 
+/// The main function that the Download Watcher runs on
 #[tokio::main(flavor = "current_thread")]
-pub async fn run(
+async fn run(
     ctx: Context,
     anime_folder: PathBuf,
     series_folder: PathBuf,
@@ -112,6 +121,7 @@ pub async fn run(
     }
 }
 
+/// Gets all Directories that can be seen in the Anime and Serien directory
 fn get_known_directories(
     anime_folder: &PathBuf,
     series_folder: &PathBuf,
@@ -121,6 +131,7 @@ fn get_known_directories(
     traverse_directory(series_folder, shared_thread_infos);
 }
 
+/// Gets all Directories that can be seen in the specified directory
 fn traverse_directory(folder: &PathBuf, shared_thread_infos: &Arc<Mutex<ThreadInfos>>) {
     std::fs::read_dir(folder)
         .unwrap()
@@ -134,6 +145,7 @@ fn traverse_directory(folder: &PathBuf, shared_thread_infos: &Arc<Mutex<ThreadIn
         });
 }
 
+/// Gets all the mapping from the config
 fn get_xml_mappings(
     directories: &mut HashMap<String, PathBuf>,
     shared_thread_infos: &Arc<Mutex<ThreadInfos>>,
@@ -151,6 +163,7 @@ fn get_xml_mappings(
     })
 }
 
+/// Will check the download Folder and move every File possible to the correct Folder
 async fn check_download_folder(
     directories: &HashMap<String, PathBuf>,
     to_ignore: &mut Vec<PathBuf>,
@@ -159,10 +172,8 @@ async fn check_download_folder(
     ctx: &Context,
     channel: &ChannelId,
 ) -> bool {
-    let pattern = Regex::new(r"(?m)^(.*?)((s\d+)[- ]?)?(e\d+).*?(.*)?\.([a-zA-Z0-9]*)").unwrap();
-
+    // gets the available files and also refreshed the to_ignore file vector
     let mut new_to_ignore: Vec<PathBuf> = Vec::new();
-
     let mut files: Vec<PathBuf> = Vec::new();
     for file in std::fs::read_dir(download_folder)
         .unwrap()
@@ -185,8 +196,10 @@ async fn check_download_folder(
     to_ignore.clear();
     to_ignore.append(&mut new_to_ignore);
 
-    let mut local_files: Vec<String> = Vec::new();
+    let pattern = Regex::new(r"(?m)^(.*?)((s\d+)[- ]?)?(e\d+).*?(.*)?\.([a-zA-Z0-9]*)").unwrap();
 
+    // retrieves the video names once in advance to refresh the missing_mappings hashmap
+    let mut local_files: Vec<String> = Vec::new();
     for file in files.clone() {
         let name = match file.file_name().unwrap().to_str() {
             None => continue,
@@ -214,6 +227,7 @@ async fn check_download_folder(
             .retain(|name| local_files.contains(name));
     }
 
+    // loop that goes through every file and tries to handle it
     'file_loop: for file in files {
         let name = match file.file_name().unwrap().to_str() {
             None => {
@@ -270,6 +284,7 @@ async fn check_download_folder(
                 let file_format = captures.get(6).unwrap().as_str();
 
                 {
+                    // if the video name is already known to be missing, don't prompt the user again
                     if shared_thread_infos
                         .lock()
                         .unwrap()
@@ -335,6 +350,7 @@ async fn check_download_folder(
     return false;
 }
 
+/// checks if the file was downloaded from voe, in this case get the actual file name
 async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelId) -> bool {
     let voe_pattern = Regex::new(
         r"(?m)Watch (.*\\.mp4) - VOE \\| Content Delivery Network \\(CDN\\) & Video Cloud",
@@ -388,6 +404,7 @@ async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelI
     return false;
 }
 
+/// Will move a found video to the given destination with the correct name
 async fn move_video(
     destination: &PathBuf,
     source: &PathBuf,
@@ -469,6 +486,7 @@ async fn move_video(
     };
 }
 
+/// The entrypoint to start the download watcher thread
 pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfos>>)> {
     let ctx1 = ctx.clone();
     let (anime_folder, series_folder, download_folder): (PathBuf, PathBuf, PathBuf);

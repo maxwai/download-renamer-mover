@@ -144,6 +144,7 @@ pub async fn all(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+/// autocomplete the known files that don't have mappings
 async fn autocomplete_alt<'a>(
     _ctx: Context<'_>,
     partial: &'a str,
@@ -159,6 +160,7 @@ async fn autocomplete_alt<'a>(
         .map(|name| name.to_string())
 }
 
+/// autocomplete the known folders
 async fn autocomplete_og<'a>(
     _ctx: Context<'a>,
     partial: &'a str,

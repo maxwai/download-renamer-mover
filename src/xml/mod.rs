@@ -26,6 +26,7 @@ const MAPPING_SINGLE_TAG: &str = "Mapping";
 const ALTERNATIVE_ATTRIBUTE_TAG: &str = "alternative";
 // Mappings
 
+/// Saves a dummy document and then exits
 fn save_dummy_document() {
     let dummy_element: Element = Element::parse(DUMMY_CONTENT.as_bytes()).unwrap();
     match dummy_element.write(File::create(CONFIG_FILE_NAME).unwrap()) {
@@ -36,6 +37,7 @@ fn save_dummy_document() {
     exit(1);
 }
 
+/// Will write the new XML file to Config.xml
 fn write_document(document: Element) {
     match document.write(File::create(CONFIG_FILE_NAME).unwrap()) {
         Ok(_) => info!("Saved the Config.xml"),
@@ -43,6 +45,7 @@ fn write_document(document: Element) {
     }
 }
 
+/// Will get the Config.xml or, if not present, create a dummy one and exit
 fn get_document() -> Element {
     let file_path = Path::new(CONFIG_FILE_NAME);
     match file_path.try_exists() {
@@ -63,6 +66,7 @@ fn get_document() -> Element {
     }
 }
 
+/// Will retrieve the Discord Bot Token
 pub fn get_bot_token() -> String {
     let document = get_document();
     match document.get_child(BOT_TOKEN_TAG) {
@@ -83,6 +87,7 @@ pub fn get_bot_token() -> String {
     }
 }
 
+/// Will retrieve the Main Channel ID
 pub fn get_main_channel() -> u64 {
     let document = get_document();
     match document.get_child(MAIN_CHANNEL_TAG) {
@@ -109,6 +114,9 @@ pub fn get_main_channel() -> u64 {
     }
 }
 
+/// Will get known Mappings if there are any
+///
+/// The Entries in the HashMap are like this: (alt -> OG)
 pub fn get_mappings() -> HashMap<String, String> {
     let document = get_document();
     match document.get_child(MAPPINGS_TAG) {
@@ -140,6 +148,7 @@ pub fn get_mappings() -> HashMap<String, String> {
     }
 }
 
+/// Will add a Mapping to the Mappings
 pub fn add_mappings<S, U>(old: S, og: U)
 where
     S: Into<String>,

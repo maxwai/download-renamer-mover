@@ -20,6 +20,7 @@ pub struct Data {
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
+/// Entrypoint to start the Bot
 pub async fn entrypoint() {
     info!("Starting the bot");
     let framework = poise::Framework::builder()
