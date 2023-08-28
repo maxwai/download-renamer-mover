@@ -1,0 +1,13 @@
+version: '3.2'
+
+services:
+  download-mover:
+    container_name: DownloadWatcher
+    build: .
+    restart: "no"
+    volumes:
+      - ./server:/download-renamer-mover/server
+      - ./appdata:/download-renamer-mover/appdata
+    environment:
+      - PUID=1000
+      - PGID=1000
