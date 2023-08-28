@@ -1,16 +1,20 @@
 use std::sync::mpsc::SyncSender;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::{download_watcher, xml};
 use log::info;
 use poise::serenity_prelude as serenity;
 use serenity::CacheHttp;
+
+use crate::download_watcher::ThreadInfos;
+use crate::{download_watcher, xml};
 
 mod commands;
 
 /// User data, which is stored and accessible in all command invocations
 pub struct Data {
     tx: Option<SyncSender<u8>>,
+    shared_thread_infos: Option<Arc<Mutex<ThreadInfos>>>,
 }
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -65,9 +69,17 @@ pub async fn entrypoint() {
                     .await;
                 match download_watcher::entrypoint(ctx) {
                     None => framework.shard_manager().lock().await.shutdown_all().await,
-                    Some(tx) => return Ok(Data { tx: Some(tx) }),
+                    Some((tx, shared_thread_infos)) => {
+                        return Ok(Data {
+                            tx: Some(tx),
+                            shared_thread_infos: Some(shared_thread_infos),
+                        })
+                    }
                 }
-                Ok(Data { tx: None })
+                Ok(Data {
+                    tx: None,
+                    shared_thread_infos: None,
+                })
             })
         });
 

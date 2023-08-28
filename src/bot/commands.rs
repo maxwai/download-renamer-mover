@@ -1,16 +1,17 @@
 use core::time;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::SystemTime;
 
 use futures::{Stream, StreamExt};
 use log::{error, info, warn};
 use poise::serenity_prelude as serenity;
-use serenity::{AttachmentType, futures};
+use serenity::{futures, AttachmentType};
 
-use crate::{download_watcher, xml};
 use crate::bot::{Context, Error};
+use crate::{download_watcher, xml};
 
 /// Show this help menu
 #[poise::command(prefix_command, track_edits, slash_command)]
@@ -84,13 +85,14 @@ pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn reload(ctx: Context<'_>) -> Result<(), Error> {
     info!("Reloading all Directories");
     if let Some(tx) = &ctx.data().tx {
-        match tx.try_send(download_watcher::SIGNAL_NEW_MAPPING) {
+        match tx.try_send(download_watcher::SIGNAL_RELOAD) {
             Ok(_) => ctx.say("Reloaded all Directories"),
             Err(why) => {
                 error!("Could not reload Directories {:?}", why);
-                ctx.say("Cloudn't reload Directories, try again later.")
+                ctx.say("Couldn't reload Directories, try again later.")
             }
-        }.await?;
+        }
+        .await?;
     }
     Ok(())
 }
@@ -140,9 +142,30 @@ async fn autocomplete_alt<'a>(
     _ctx: Context<'_>,
     partial: &'a str,
 ) -> impl Stream<Item = String> + 'a {
-    futures::stream::iter(download_watcher::get_current_missing_mappings())
+    let missing_mappings: Vec<String>;
+    if let Some(shared_data) = &_ctx.data().shared_thread_infos {
+        missing_mappings = shared_data.lock().unwrap().missing_mappings.clone();
+    } else {
+        missing_mappings = Vec::new();
+    }
+    futures::stream::iter(missing_mappings)
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
         .map(|name| name.to_string())
+}
+
+async fn autocomplete_og<'a>(
+    _ctx: Context<'a>,
+    partial: &'a str,
+) -> impl Stream<Item = String> + 'a {
+    let directories: HashMap<String, PathBuf>;
+    if let Some(shared_data) = &_ctx.data().shared_thread_infos {
+        directories = shared_data.lock().unwrap().og_directories.clone();
+    } else {
+        directories = HashMap::new();
+    }
+    futures::stream::iter(directories.into_iter())
+        .filter(move |(name, _)| futures::future::ready(name.starts_with(partial)))
+        .map(|(name, _)| name.to_string())
 }
 
 /// Will add a new Mapping to the Bot
@@ -153,23 +176,34 @@ pub async fn new(
     #[autocomplete = "autocomplete_alt"]
     mut alt: String,
     #[description = "series name on server"]
-    #[autocomplete = "autocomplete_alt"]
+    #[autocomplete = "autocomplete_og"]
     mut og: String,
 ) -> Result<(), Error> {
     alt = alt.to_lowercase();
     og = og.to_lowercase();
-    if download_watcher::get_directories().contains(&og) {
-        info!("Adding new Mapping");
-        let message = ctx.say("Done");
-        xml::add_mappings(alt, og);
-        if let Some(tx) = &ctx.data().tx {
-            tx.send(download_watcher::SIGNAL_NEW_MAPPING)?;
-        }
-        message.await?;
-    } else {
-        warn!("Mapping could not be added");
-        ctx.say(format!("Don't know `{}` please try again.", og))
+    if let Some(shared_data) = &ctx.data().shared_thread_infos {
+        if shared_data
+            .lock()
+            .unwrap()
+            .og_directories
+            .contains_key(og.as_str())
+        {
+            info!("Adding new Mapping");
+            let message = ctx.say("Done".to_string());
+            xml::add_mappings(alt, og);
+            if let Some(tx) = &ctx.data().tx {
+                tx.send(download_watcher::SIGNAL_NEW_MAPPING)?;
+            }
+            message.await?;
+        } else {
+            warn!("Mapping could not be added");
+            ctx.say(format!("Don't know `{}` please try again.", og))
             .await?;
+        }
+    } else {
+        warn!("Mapping Thread not started");
+        ctx.say("Mapping Thread not started".to_string()).await?;
     }
+
     Ok(())
 }

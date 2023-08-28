@@ -1,7 +1,8 @@
 use std::{env, thread};
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, SyncSender};
 
 use log::{error, info};
@@ -12,6 +13,12 @@ use crate::xml;
 
 pub const SIGNAL_NEW_MAPPING: u8 = 1;
 pub const SIGNAL_RELOAD: u8 = 2;
+
+pub struct ThreadInfos {
+    pub missing_mappings: Vec<String>,
+    pub directories: HashMap<String, PathBuf>,
+    pub og_directories: HashMap<String, PathBuf>
+}
 
 pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
     const DOWNLOAD_FOLDER_NAME: &str = "Download";
@@ -54,21 +61,13 @@ pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
     Some((anime_folder, series_folder, download_folder))
 }
 
-pub fn get_current_missing_mappings() -> Vec<String> {
-    vec![]
-}
-
-pub fn get_directories() -> Vec<String> {
-    vec![]
-}
-
-pub fn run(_ctx: Context, _anime_folder: PathBuf, _series_folder: PathBuf, _download_folder: PathBuf, _rx: Receiver<u8>) {
+pub fn run(_ctx: Context, _anime_folder: PathBuf, _series_folder: PathBuf, _download_folder: PathBuf, _rx: Receiver<u8>, _shared_thread_infos: Arc<Mutex<ThreadInfos>>) {
     let _channel = ChannelId(xml::get_main_channel());
-    // TODO: rcv(SIGNAL_NEW_MAPPING) == new mapping
-    // TODO: rcv(SIGNAL_RELOAD) == new mapping
+    // TODO: rcv(SIGNAL_NEW_MAPPING) == new mapping -> reload mappings from xml
+    // TODO: rcv(SIGNAL_RELOAD) == reload directories
 }
 
-pub fn entrypoint(ctx: &Context) -> Option<SyncSender<u8>> {
+pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfos>>)> {
     let ctx1 = ctx.clone();
     let (anime_folder, series_folder, download_folder): (PathBuf, PathBuf, PathBuf);
     match get_paths() {
@@ -84,8 +83,15 @@ pub fn entrypoint(ctx: &Context) -> Option<SyncSender<u8>> {
 
     let (tx, rx) = mpsc::sync_channel(16);
 
+    let shared_thread_infos = Arc::new(Mutex::new(ThreadInfos {
+        missing_mappings: Vec::new(),
+        directories: HashMap::new(),
+        og_directories: HashMap::new()
+    }));
+
+    let infos_for_thread = Arc::clone(&shared_thread_infos);
     thread::spawn(move || {
-        run(ctx1, anime_folder, series_folder, download_folder, rx);
+        run(ctx1, anime_folder, series_folder, download_folder, rx, infos_for_thread);
     });
-    return Some(tx)
+    return Some((tx, shared_thread_infos));
 }
