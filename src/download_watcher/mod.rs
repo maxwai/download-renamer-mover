@@ -82,8 +82,8 @@ pub async fn run(
     let channel = ChannelId(xml::get_main_channel());
     let mut directories: HashMap<String, PathBuf> = HashMap::new();
     let mut to_ignore: Vec<PathBuf> = Vec::new();
-    get_xml_mappings(&mut directories, &shared_thread_infos);
     get_known_directories(&anime_folder, &series_folder, &shared_thread_infos);
+    get_xml_mappings(&mut directories, &shared_thread_infos);
     loop {
         if !check_download_folder(
             &directories,
@@ -142,10 +142,12 @@ fn get_xml_mappings(
     directories.clear();
     new_mappings.iter().for_each(|(&ref alt, og)| {
         let mutex_share = shared_thread_infos.lock().unwrap();
-        directories.insert(
-            alt.to_string(),
-            mutex_share.og_directories.get(og).unwrap().to_path_buf(),
-        );
+        match mutex_share.og_directories.get(og) {
+            None => {}
+            Some(path) => {
+                directories.insert(alt.to_string(), path.to_path_buf());
+            }
+        }
     })
 }
 
@@ -489,15 +491,17 @@ pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfo
     }));
 
     let infos_for_thread = Arc::clone(&shared_thread_infos);
-    thread::spawn(move || {
-        run(
-            ctx1,
-            anime_folder,
-            series_folder,
-            download_folder,
-            rx,
-            infos_for_thread,
-        );
-    });
+    let _ = thread::Builder::new()
+        .name("download_watcher".into())
+        .spawn(move || {
+            run(
+                ctx1,
+                anime_folder,
+                series_folder,
+                download_folder,
+                rx,
+                infos_for_thread,
+            );
+        });
     return Some((tx, shared_thread_infos));
 }
