@@ -197,7 +197,11 @@ pub async fn new(
             info!("Adding new Mapping");
             let message = ctx.say("Done".to_string());
             {
-                shared_data.lock().unwrap().missing_mappings.retain(|x| x.deref() != alt);
+                shared_data
+                    .lock()
+                    .unwrap()
+                    .missing_mappings
+                    .retain(|x| x.deref() != alt);
             }
             xml::add_mappings(alt, og);
             if let Some(tx) = &ctx.data().tx {
@@ -207,7 +211,7 @@ pub async fn new(
         } else {
             warn!("Mapping could not be added");
             ctx.say(format!("Don't know `{}` please try again.", og))
-            .await?;
+                .await?;
         }
     } else {
         warn!("Mapping Thread not started");
