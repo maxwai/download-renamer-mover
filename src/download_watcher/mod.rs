@@ -250,7 +250,7 @@ async fn check_download_folder(
                         .say(
                             ctx,
                             format!("{} `{}` did not match regex. Please adjust regex to match file name",
-                                    ERROR_EMOJI, file.display()),
+                                    ERROR_EMOJI, name),
                         )
                         .await;
                     to_ignore.push(file);
