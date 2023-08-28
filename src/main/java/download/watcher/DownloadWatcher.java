@@ -313,9 +313,7 @@ public class DownloadWatcher {
 		} catch (IOException e) {
 			logger.error("Got some sort of IOException");
 			e.printStackTrace();
-			textChannel.sendMessage(
-							ERROR_EMOJI + "Got some sort of IOException please check " + "the " +
-							"logs")
+			textChannel.sendMessage(ERROR_EMOJI + "Got some sort of IOException please check the logs")
 					.queue();
 		}
 		return false;
