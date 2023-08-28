@@ -433,7 +433,7 @@ async fn move_video(
 
     let target = season_destination.join(format!(
         "{} - s{:02}e{:02}.{}",
-        destination.to_str().unwrap(),
+        destination.file_name().unwrap().to_str().unwrap(),
         season,
         episode,
         file_format
