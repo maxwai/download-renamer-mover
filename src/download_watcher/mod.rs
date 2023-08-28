@@ -196,7 +196,7 @@ async fn check_download_folder(
     to_ignore.clear();
     to_ignore.append(&mut new_to_ignore);
 
-    let pattern = Regex::new(r"(?m)^(.*?)((s\d+)[- ]?)?(e\d+).*?(.*)?\.([a-zA-Z0-9]*)").unwrap();
+    let pattern = Regex::new(r"(?i)^(.*?)((s\d+)[- ]?)?(e\d+).*?(.*)?\.([a-zA-Z0-9]*)").unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
     let mut local_files: Vec<String> = Vec::new();
@@ -205,14 +205,14 @@ async fn check_download_folder(
             None => continue,
             Some(string) => string,
         };
-        match pattern.captures(name) {
+        match pattern.captures(name.to_lowercase().as_str()) {
             None => {}
             Some(captures) => {
                 let temp_video_name = captures
                     .get(1)
                     .unwrap()
                     .as_str()
-                    .replace("\\.", " ")
+                    .replace(".", " ")
                     .replace("-", " ");
                 let video_name = temp_video_name.trim().to_string();
                 local_files.push(video_name);
@@ -242,7 +242,7 @@ async fn check_download_folder(
             }
             Some(string) => string,
         };
-        match pattern.captures(name) {
+        match pattern.captures(name.to_lowercase().as_str()) {
             None => {
                 if !check_voe(name, &file, ctx, channel).await {
                     warn!("File did not contain regex");
@@ -263,7 +263,7 @@ async fn check_download_folder(
                     .get(1)
                     .unwrap()
                     .as_str()
-                    .replace("\\.", " ")
+                    .replace(".", " ")
                     .replace("-", " ");
                 let video_name = temp_video_name.trim();
                 let season = match captures.get(3).map(|capture| capture.as_str()) {
@@ -275,7 +275,7 @@ async fn check_download_folder(
                         to_ignore.push(file);
                         continue 'file_loop;
                     }
-                    Some(season) => season.parse::<i32>().unwrap(),
+                    Some(season) => season[1..].parse::<i32>().unwrap(),
                 };
                 let episode = captures.get(4).unwrap().as_str()[1..]
                     .parse::<i32>()
@@ -353,7 +353,7 @@ async fn check_download_folder(
 /// checks if the file was downloaded from voe, in this case get the actual file name
 async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelId) -> bool {
     let voe_pattern = Regex::new(
-        r"(?m)Watch (.*\\.mp4) - VOE \\| Content Delivery Network \\(CDN\\) & Video Cloud",
+        r"Watch (.*\.mp4) - VOE \| Content Delivery Network \(CDN\) & Video Cloud",
     )
     .unwrap();
     let mut local_name = name.clone();

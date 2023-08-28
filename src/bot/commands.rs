@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::string::ToString;
 use std::thread::sleep;
 use std::time::SystemTime;
 
@@ -155,7 +156,7 @@ async fn autocomplete_alt<'a>(
     } else {
         missing_mappings = Vec::new();
     }
-    futures::stream::iter(missing_mappings)
+    futures::stream::iter(missing_mappings.clone())
         .filter(move |name| futures::future::ready(name.starts_with(partial)))
         .map(|name| name.to_string())
 }
@@ -171,7 +172,7 @@ async fn autocomplete_og<'a>(
     } else {
         directories = HashMap::new();
     }
-    futures::stream::iter(directories.into_iter())
+    futures::stream::iter(directories.clone().into_iter())
         .filter(move |(name, _)| futures::future::ready(name.starts_with(partial)))
         .map(|(name, _)| name.to_string())
 }
