@@ -56,10 +56,11 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
 /// Reloads the slash commands in the guild
 #[poise::command(slash_command, prefix_command)]
 pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.defer().await?;
     match ctx.guild_id() {
         None => ctx.say("Command only possible in Guild"),
         Some(guild) => {
-            poise::builtins::register_in_guild(ctx, &ctx.framework().options().commands, guild)
+            poise::builtins::register_in_guild(ctx, &ctx.framework().options().commands[0..0], guild)
                 .await?;
             ctx.say("Reloaded slash commands")
         }

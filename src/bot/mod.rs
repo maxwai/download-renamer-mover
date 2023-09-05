@@ -27,6 +27,7 @@ pub async fn entrypoint() {
         .options(poise::FrameworkOptions {
             commands: vec![
                 commands::help(),
+                commands::reload(),
                 commands::reload_slash(),
                 commands::ping(),
                 commands::stop(),
