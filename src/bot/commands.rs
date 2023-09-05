@@ -60,7 +60,7 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
     match ctx.guild_id() {
         None => ctx.say("Command only possible in Guild"),
         Some(guild) => {
-            poise::builtins::register_in_guild(ctx, &ctx.framework().options().commands[0..0], guild)
+            poise::builtins::register_in_guild(ctx, &ctx.framework().options().commands, guild)
                 .await?;
             ctx.say("Reloaded slash commands")
         }
