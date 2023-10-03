@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use log::info;
 use poise::serenity_prelude as serenity;
-use serenity::CacheHttp;
 
 use crate::download_watcher::ThreadInfos;
 use crate::{download_watcher, xml};
@@ -51,7 +50,7 @@ pub async fn entrypoint() {
                         "Received Command from {} in channel {}: {}",
                         ctx.author().name,
                         ctx.channel_id()
-                            .name(ctx.cache().unwrap())
+                            .name(ctx.cache())
                             .await
                             .unwrap_or_else(|| { "Unknown".to_string() }),
                         ctx.invocation_string()
