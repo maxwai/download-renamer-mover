@@ -1,13 +1,13 @@
 extern crate regex;
 extern crate reqwest;
 
+use std::{env, thread};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, SyncSender};
-use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
-use std::{env, thread};
 
 use log::{error, info, warn};
 use poise::serenity_prelude as serenity;
@@ -242,21 +242,20 @@ async fn check_download_folder(
             }
             Some(string) => string,
         };
+        if check_voe(name, &file, ctx, channel).await {
+            return true;
+        }
         match pattern.captures(name.to_lowercase().as_str()) {
             None => {
-                if !check_voe(name, &file, ctx, channel).await {
-                    warn!("File did not contain regex");
-                    let _ = channel
-                        .say(
-                            ctx,
-                            format!("{} `{}` did not match regex. Please adjust regex to match file name",
-                                    ERROR_EMOJI, name),
-                        )
-                        .await;
-                    to_ignore.push(file);
-                } else {
-                    return true;
-                }
+                warn!("File did not contain regex");
+                let _ = channel
+                    .say(
+                        ctx,
+                        format!("{} `{}` did not match regex. Please adjust regex to match file name",
+                                ERROR_EMOJI, name),
+                    )
+                    .await;
+                to_ignore.push(file);
             }
             Some(captures) => {
                 let temp_video_name = captures
@@ -326,20 +325,16 @@ async fn check_download_folder(
                                 .await;
                             }
                             None => {
-                                if !check_voe(name, &file, ctx, channel).await {
-                                    warn!("File name \"{}\" is not known", video_name);
-                                    mutex_share.missing_mappings.push(video_name.to_string());
-                                    let _ = channel.send_message(ctx, |builder| {
-                                        builder.embed(|embed_builder| {
-                                            embed_builder.field(
-                                                "Please add a Mapping with following command:",
-                                                format!("`/map new alt:{} og:<series name on the server>`", video_name),
-                                                false)
-                                        })
-                                    }).await;
-                                } else {
-                                    return true;
-                                }
+                                warn!("File name \"{}\" is not known", video_name);
+                                mutex_share.missing_mappings.push(video_name.to_string());
+                                let _ = channel.send_message(ctx, |builder| {
+                                    builder.embed(|embed_builder| {
+                                        embed_builder.field(
+                                            "Please add a Mapping with following command:",
+                                            format!("`/map new alt:{} og:<series name on the server>`", video_name),
+                                            false)
+                                    })
+                                }).await;
                             }
                         }
                     }
@@ -358,10 +353,9 @@ async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelI
     .unwrap();
     let mut local_name = name.clone();
     if !local_name.starts_with("voe_")
-        && (local_name.contains(" ")
-            || local_name.chars().filter(|ch| *ch == '.').count() != 1
-            || !local_name.ends_with(".mp4"))
-    {
+        || local_name.contains(" ")
+        || local_name.chars().filter(|ch| *ch == '.').count() != 1
+        || !local_name.ends_with(".mp4") {
         return false;
     }
     if local_name.starts_with("voe_") {
