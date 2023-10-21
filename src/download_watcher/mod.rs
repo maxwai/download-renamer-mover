@@ -228,33 +228,39 @@ async fn check_download_folder(
     }
 
     // loop that goes through every file and tries to handle it
+    let mut return_value = false;
+    let mut reply = String::from("");
     'file_loop: for file in files {
         let name = match file.file_name().unwrap().to_str() {
             None => {
                 error!("File name not UTF-8: {}", file.display());
-                let _ = channel
-                    .say(
-                        ctx,
-                        format!("{} File name not UTF-8: {}", ERROR_EMOJI, file.display()),
-                    )
-                    .await;
-                return false;
+                let message = format!("{} File name not UTF-8: {}", ERROR_EMOJI, file.display());
+                if reply.len() + message.len() >= 1999 {
+                    let _ = channel.say(ctx, reply.clone()).await;
+                    reply.clear();
+                }
+                reply.push_str(message.as_str());
+                reply.push('\n');
+                break 'file_loop;
             }
             Some(string) => string,
         };
         if check_voe(name, &file, ctx, channel).await {
-            return true;
+            return_value = true;
+            break 'file_loop;
         }
         match pattern.captures(name.to_lowercase().as_str()) {
             None => {
                 warn!("File did not contain regex");
-                let _ = channel
-                    .say(
-                        ctx,
-                        format!("{} `{}` did not match regex. Please adjust regex to match file name",
-                                ERROR_EMOJI, name),
-                    )
-                    .await;
+                let message = format!(
+                    "{} `{}` did not match regex. Please adjust regex to match file name",
+                    ERROR_EMOJI, name);
+                if reply.len() + message.len() >= 1999 {
+                    let _ = channel.say(ctx, reply.clone()).await;
+                    reply.clear();
+                }
+                reply.push_str(message.as_str());
+                reply.push('\n');
                 to_ignore.push(file);
             }
             Some(captures) => {
@@ -267,10 +273,17 @@ async fn check_download_folder(
                 let video_name = temp_video_name.trim();
                 let season = match captures.get(3).map(|capture| capture.as_str()) {
                     None => {
-                        let _ = channel.say(
-                            ctx,
-                            format!("{} `{}` does not have a Season. Please add a Season or move it manually", ERROR_EMOJI, name)
-                        ).await;
+                        let message = format!(
+                            "{} `{}` does not have a Season. Please add a Season or move it manually",
+                            ERROR_EMOJI, name);
+
+                        if reply.len() + message.len() >= 1999 {
+                            let _ = channel.say(ctx, reply.clone()).await;
+                            reply.clear();
+                        }
+                        reply.push_str(message.as_str());
+                        reply.push('\n');
+
                         to_ignore.push(file);
                         continue 'file_loop;
                     }
@@ -296,33 +309,43 @@ async fn check_download_folder(
 
                 match directories.get(video_name) {
                     Some(video_path) => {
-                        move_video(
+                        let message = move_video(
                             video_path,
                             &file,
                             season,
                             episode,
                             file_format,
-                            ctx,
-                            channel,
                             shared_thread_infos,
                         )
                         .await;
+
+                        if reply.len() + message.len() >= 1999 {
+                            let _ = channel.say(ctx, reply.clone()).await;
+                            reply.clear();
+                        }
+                        reply.push_str(message.as_str());
+                        reply.push('\n');
                     }
                     None => {
                         let mut mutex_share = shared_thread_infos.lock().unwrap();
                         match mutex_share.og_directories.get(video_name) {
                             Some(video_path) => {
-                                move_video(
+                                let message = move_video(
                                     video_path,
                                     &file,
                                     season,
                                     episode,
                                     file_format,
-                                    ctx,
-                                    channel,
                                     shared_thread_infos,
                                 )
                                 .await;
+
+                                if reply.len() + message.len() >= 1999 {
+                            let _ = channel.say(ctx, reply.clone()).await;
+                            reply.clear();
+                        }
+                        reply.push_str(message.as_str());
+                                reply.push('\n');
                             }
                             None => {
                                 warn!("File name \"{}\" is not known", video_name);
@@ -342,7 +365,10 @@ async fn check_download_folder(
             }
         };
     }
-    return false;
+    if !reply.is_empty() {
+        let _ = channel.say(ctx,reply).await;
+    }
+    return return_value;
 }
 
 /// checks if the file was downloaded from voe, in this case get the actual file name
@@ -405,23 +431,15 @@ async fn move_video(
     season: i32,
     episode: i32,
     file_format: &str,
-    ctx: &Context,
-    channel: &ChannelId,
     shared_thread_infos: &Arc<Mutex<ThreadInfos>>,
-) {
+) -> String {
     let season_destination = destination.join(format!("Staffel {:02}", season));
     if !season_destination.is_dir() {
         if let Err(why) = std::fs::create_dir(season_destination.clone()) {
             error!("{:?}", why);
-            let _ = channel
-                .say(
-                    ctx,
-                    format!(
-                        "{} Something went wrong while trying to create the directory `{}`. Please look at the logs",
-                        ERROR_EMOJI, season_destination.display()
-                    ),
-                )
-                .await;
+            return format!(
+                "{} Something went wrong while trying to create the directory `{}`. Please look at the logs",
+                ERROR_EMOJI, season_destination.display());
         }
     }
 
@@ -445,37 +463,28 @@ async fn move_video(
                 .unwrap()
                 .to_string(),
         );
-        return;
+        return format!("{} File already present: `{}`",
+                       ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap());
     }
-    match std::fs::rename(source, target.clone()) {
+    return match std::fs::rename(source, target.clone()) {
         Ok(_) => {
             info!(
                 "Moved {} to {}",
                 source.file_name().unwrap().to_str().unwrap(),
                 target.file_name().unwrap().to_str().unwrap()
             );
-            let _ = channel
-                .say(
-                    ctx,
-                    format!(
-                        "Moved `{}` as `{}` to known folder.",
-                        source.file_name().unwrap().to_str().unwrap(),
-                        target.file_name().unwrap().to_str().unwrap()
-                    ),
-                )
-                .await;
+            format!(
+                "Moved `{}` as `{}` to known folder.",
+                source.file_name().unwrap().to_str().unwrap(),
+                target.file_name().unwrap().to_str().unwrap()
+            )
         }
         Err(why) => {
             error!("{:?}", why);
-            let _ = channel
-                .say(
-                    ctx,
-                    format!(
-                        "{} Something went wrong while trying to move the file `{}`. Please look at the logs",
-                        ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap()
-                    ),
-                )
-                .await;
+            format!(
+                "{} Something went wrong while trying to move the file `{}`. Please look at the logs",
+                ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap()
+            )
         }
     };
 }
