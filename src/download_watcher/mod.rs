@@ -475,8 +475,8 @@ async fn move_video(
             );
             format!(
                 "Moved `{}` as `{}` to known folder.",
-                source.file_name().unwrap().to_str().unwrap(),
-                target.file_name().unwrap().to_str().unwrap()
+                source.file_name().unwrap().to_str().unwrap().replace("`", "\\`"),
+                target.file_name().unwrap().to_str().unwrap().replace("`", "\\`")
             )
         }
         Err(why) => {
