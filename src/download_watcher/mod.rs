@@ -254,7 +254,8 @@ async fn check_download_folder(
                 warn!("File did not contain regex");
                 let message = format!(
                     "{} `{}` did not match regex. Please adjust regex to match file name",
-                    ERROR_EMOJI, name);
+                    ERROR_EMOJI, name
+                );
                 if reply.len() + message.len() >= 1999 {
                     let _ = channel.say(ctx, reply.clone()).await;
                     reply.clear();
@@ -327,11 +328,16 @@ async fn check_download_folder(
                         reply.push('\n');
                     }
                     None => {
-                        let mut mutex_share = shared_thread_infos.lock().unwrap();
-                        match mutex_share.og_directories.get(video_name) {
+                        let path = shared_thread_infos
+                            .lock()
+                            .unwrap()
+                            .og_directories
+                            .get(video_name)
+                            .cloned();
+                        match path {
                             Some(video_path) => {
                                 let message = move_video(
-                                    video_path,
+                                    &video_path,
                                     &file,
                                     season,
                                     episode,
@@ -341,15 +347,19 @@ async fn check_download_folder(
                                 .await;
 
                                 if reply.len() + message.len() >= 1999 {
-                            let _ = channel.say(ctx, reply.clone()).await;
-                            reply.clear();
-                        }
-                        reply.push_str(message.as_str());
+                                    let _ = channel.say(ctx, reply.clone()).await;
+                                    reply.clear();
+                                }
+                                reply.push_str(message.as_str());
                                 reply.push('\n');
                             }
                             None => {
                                 warn!("File name \"{}\" is not known", video_name);
-                                mutex_share.missing_mappings.push(video_name.to_string());
+                                shared_thread_infos
+                                    .lock()
+                                    .unwrap()
+                                    .missing_mappings
+                                    .push(video_name.to_string());
                                 let _ = channel.send_message(ctx, |builder| {
                                     builder.embed(|embed_builder| {
                                         embed_builder.field(
@@ -366,22 +376,22 @@ async fn check_download_folder(
         };
     }
     if !reply.is_empty() {
-        let _ = channel.say(ctx,reply).await;
+        let _ = channel.say(ctx, reply).await;
     }
     return return_value;
 }
 
 /// checks if the file was downloaded from voe, in this case get the actual file name
 async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelId) -> bool {
-    let voe_pattern = Regex::new(
-        r"Watch (.*\.mp4) - VOE \| Content Delivery Network \(CDN\) & Video Cloud",
-    )
-    .unwrap();
+    let voe_pattern =
+        Regex::new(r"Watch (.*\.mp4) - VOE \| Content Delivery Network \(CDN\) & Video Cloud")
+            .unwrap();
     let mut local_name = name.clone();
     if !local_name.starts_with("voe_")
         || local_name.contains(" ")
         || local_name.chars().filter(|ch| *ch == '.').count() != 1
-        || !local_name.ends_with(".mp4") {
+        || !local_name.ends_with(".mp4")
+    {
         return false;
     }
     if local_name.starts_with("voe_") {
@@ -463,8 +473,11 @@ async fn move_video(
                 .unwrap()
                 .to_string(),
         );
-        return format!("{} File already present: `{}`",
-                       ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap());
+        return format!(
+            "{} File already present: `{}`",
+            ERROR_EMOJI,
+            source.file_name().unwrap().to_str().unwrap()
+        );
     }
     return match std::fs::rename(source, target.clone()) {
         Ok(_) => {
@@ -475,8 +488,18 @@ async fn move_video(
             );
             format!(
                 "Moved `{}` as `{}` to known folder.",
-                source.file_name().unwrap().to_str().unwrap().replace("`", "\\`"),
-                target.file_name().unwrap().to_str().unwrap().replace("`", "\\`")
+                source
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace("`", "\\`"),
+                target
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace("`", "\\`")
             )
         }
         Err(why) => {
