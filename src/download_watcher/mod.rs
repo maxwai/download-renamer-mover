@@ -30,6 +30,8 @@ const ERROR_EMOJI: &str = ":x: ";
 pub struct ThreadInfos {
     /// The Mappings that need to be added
     pub missing_mappings: Vec<String>,
+    /// The files that are duplicates
+    pub duplicate_files: Vec<String>,
     /// The Directories that are present and known
     pub og_directories: HashMap<String, PathBuf>,
 }
@@ -320,12 +322,14 @@ async fn check_download_folder(
                         )
                         .await;
 
-                        if reply.len() + message.len() >= 1999 {
-                            let _ = channel.say(ctx, reply.clone()).await;
-                            reply.clear();
+                        if !message.is_empty() {
+                            if reply.len() + message.len() >= 1999 {
+                                let _ = channel.say(ctx, reply.clone()).await;
+                                reply.clear();
+                            }
+                            reply.push_str(message.as_str());
+                            reply.push('\n');
                         }
-                        reply.push_str(message.as_str());
-                        reply.push('\n');
                     }
                     None => {
                         let path = shared_thread_infos
@@ -346,12 +350,14 @@ async fn check_download_folder(
                                 )
                                 .await;
 
-                                if reply.len() + message.len() >= 1999 {
-                                    let _ = channel.say(ctx, reply.clone()).await;
-                                    reply.clear();
+                                if !message.is_empty() {
+                                    if reply.len() + message.len() >= 1999 {
+                                        let _ = channel.say(ctx, reply.clone()).await;
+                                        reply.clear();
+                                    }
+                                    reply.push_str(message.as_str());
+                                    reply.push('\n');
                                 }
-                                reply.push_str(message.as_str());
-                                reply.push('\n');
                             }
                             None => {
                                 warn!("File name \"{}\" is not known", video_name);
@@ -461,23 +467,30 @@ async fn move_video(
         file_format
     ));
     if target.is_file() {
-        warn!(
-            "{} is a duplicate file",
-            source.file_name().unwrap().to_str().unwrap()
-        );
-        shared_thread_infos.lock().unwrap().missing_mappings.push(
-            destination
-                .file_name()
+        let file_name = source.file_name().unwrap().to_str().unwrap().to_string();
+        return if !shared_thread_infos
+            .lock()
+            .unwrap()
+            .duplicate_files
+            .contains(&file_name)
+        {
+            warn!(
+                "{} is a duplicate file",
+                source.file_name().unwrap().to_str().unwrap()
+            );
+            shared_thread_infos
+                .lock()
                 .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string(),
-        );
-        return format!(
-            "{} File already present: `{}`",
-            ERROR_EMOJI,
-            source.file_name().unwrap().to_str().unwrap()
-        );
+                .duplicate_files
+                .push(file_name);
+            format!(
+                "{} File already present: `{}`",
+                ERROR_EMOJI,
+                source.file_name().unwrap().to_str().unwrap()
+            )
+        } else {
+            String::new()
+        };
     }
     return match std::fs::rename(source, target.clone()) {
         Ok(_) => {
@@ -531,6 +544,7 @@ pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfo
 
     let shared_thread_infos = Arc::new(Mutex::new(ThreadInfos {
         missing_mappings: Vec::new(),
+        duplicate_files: Vec::new(),
         og_directories: HashMap::new(),
     }));
 
