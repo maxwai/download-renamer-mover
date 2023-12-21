@@ -230,7 +230,6 @@ async fn check_download_folder(
     }
 
     // loop that goes through every file and tries to handle it
-    let mut return_value = false;
     let mut reply = String::from("");
     'file_loop: for file in files {
         let name = match file.file_name().unwrap().to_str() {
@@ -247,10 +246,6 @@ async fn check_download_folder(
             }
             Some(string) => string,
         };
-        if check_voe(name, &file, ctx, channel).await {
-            return_value = true;
-            break 'file_loop;
-        }
         match pattern.captures(name.to_lowercase().as_str()) {
             None => {
                 warn!("File did not contain regex");
@@ -384,59 +379,6 @@ async fn check_download_folder(
     if !reply.is_empty() {
         let _ = channel.say(ctx, reply).await;
     }
-    return return_value;
-}
-
-/// checks if the file was downloaded from voe, in this case get the actual file name
-async fn check_voe(name: &str, file: &PathBuf, ctx: &Context, channel: &ChannelId) -> bool {
-    let voe_pattern =
-        Regex::new(r"Watch (.*\.mp4) - VOE \| Content Delivery Network \(CDN\) & Video Cloud")
-            .unwrap();
-    let mut local_name = name.clone();
-    if !local_name.starts_with("voe_")
-        || local_name.contains(" ")
-        || local_name.chars().filter(|ch| *ch == '.').count() != 1
-        || !local_name.ends_with(".mp4")
-    {
-        return false;
-    }
-    if local_name.starts_with("voe_") {
-        local_name = &local_name[4..];
-    }
-
-    match reqwest::get(format!(
-        "https://voe.sx/e/{}",
-        local_name.replace(".mp4", "")
-    ))
-    .await
-    {
-        Ok(response) => {
-            for line in response.text().await.unwrap().split("\n") {
-                if line.contains("<title>") {
-                    if let Some(captures) = voe_pattern.captures(line) {
-                        let video_name = captures.get(1).unwrap().as_str().trim();
-                        std::fs::rename(file, file.parent().unwrap().join(video_name)).unwrap();
-                        return true;
-                    }
-                    break;
-                }
-            }
-        }
-        Err(why) => {
-            error!("{:?}", why);
-            let _ = channel
-                .say(
-                    ctx,
-                    format!(
-                        "{} Got some kind of error while trying to connect to voe, check the logs",
-                        ERROR_EMOJI
-                    ),
-                )
-                .await;
-            return false;
-        }
-    };
-
     return false;
 }
 
