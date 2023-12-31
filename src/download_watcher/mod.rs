@@ -198,7 +198,7 @@ async fn check_download_folder(
     to_ignore.clear();
     to_ignore.append(&mut new_to_ignore);
 
-    let pattern = Regex::new(r"(?i)^(.*?)((s\d+)[- ]?)?(e\d+).*?(.*)?\.([a-zA-Z0-9]*)").unwrap();
+    let pattern = Regex::new(r"(?i)^(?:\[.*] +)?(.*?)(?:(s\d+)[- ]?)?(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
     let mut local_files: Vec<String> = Vec::new();
@@ -269,7 +269,7 @@ async fn check_download_folder(
                     .replace(".", " ")
                     .replace("-", " ");
                 let video_name = temp_video_name.trim();
-                let season = match captures.get(3).map(|capture| capture.as_str()) {
+                let season = match captures.get(2).map(|capture| capture.as_str()) {
                     None => {
                         let message = format!(
                             "{} `{}` does not have a Season. Please add a Season or move it manually",
@@ -287,11 +287,11 @@ async fn check_download_folder(
                     }
                     Some(season) => season[1..].parse::<i32>().unwrap(),
                 };
-                let episode = captures.get(4).unwrap().as_str()[1..]
+                let episode = captures.get(3).unwrap().as_str()[1..]
                     .parse::<i32>()
                     .unwrap();
                 // group 5 is all the not needed information between episode number and file ending
-                let file_format = captures.get(6).unwrap().as_str();
+                let file_format = captures.get(4).unwrap().as_str();
 
                 {
                     // if the video name is already known to be missing, don't prompt the user again
