@@ -160,6 +160,7 @@ async fn autocomplete_alt<'a>(
     futures::stream::iter(missing_mappings.clone())
         .filter(move |name| futures::future::ready(name.contains(partial)))
         .map(|name| name.to_string())
+        .take(10)
 }
 
 /// autocomplete the known folders
@@ -176,6 +177,7 @@ async fn autocomplete_og<'a>(
     futures::stream::iter(directories.clone().into_iter())
         .filter(move |(name, _)| futures::future::ready(name.contains(partial)))
         .map(|(name, _)| name.to_string())
+        .take(10)
 }
 
 /// Will add a new Mapping to the Bot
