@@ -3,7 +3,6 @@ extern crate reqwest;
 
 use std::{env, thread};
 use std::collections::HashMap;
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, mpsc, Mutex};
 use std::sync::mpsc::{Receiver, SyncSender};
@@ -47,7 +46,7 @@ pub fn get_paths() -> Option<(PathBuf, PathBuf, PathBuf)> {
 
     let args: Vec<String> = env::args().collect();
     let root_path = Path::new(if args.len() != 2 {
-        "./server".deref()
+        "./server"
     } else {
         &args[1]
     });
@@ -88,7 +87,7 @@ async fn run(
     rx: Receiver<u8>,
     shared_thread_infos: Arc<Mutex<ThreadInfos>>,
 ) {
-    const WAIT_TIME_IN_SEC: u64 = 60;
+    const WAIT_TIME_IN_SEC: u64 = 15;
 
     let channel = ChannelId(xml::get_main_channel());
     let mut directories: HashMap<String, PathBuf> = HashMap::new();
