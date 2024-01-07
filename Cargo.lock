@@ -314,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "download-renamer-mover"
-version = "2.1.8"
+version = "2.1.9"
 dependencies = [
  "log",
  "log4rs",
