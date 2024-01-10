@@ -202,6 +202,7 @@ pub async fn new(
         {
             info!("Adding new Mapping");
             let message = ctx.say("Done".to_string());
+            xml::add_mappings(alt.clone(), og);
             {
                 shared_data
                     .lock()
@@ -209,7 +210,6 @@ pub async fn new(
                     .missing_mappings
                     .retain(|x| x.deref() != alt);
             }
-            xml::add_mappings(alt, og);
             if let Some(tx) = &ctx.data().tx {
                 tx.send(download_watcher::SIGNAL_NEW_MAPPING)?;
             }
