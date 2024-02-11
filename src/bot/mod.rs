@@ -1,12 +1,13 @@
-use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, Mutex};
+use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 
 use log::info;
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::ActivityData;
 
-use crate::download_watcher::ThreadInfos;
 use crate::{download_watcher, xml};
+use crate::download_watcher::ThreadInfos;
 
 mod commands;
 
@@ -33,48 +34,43 @@ pub async fn entrypoint() {
                 commands::map(),
             ],
             allowed_mentions: Some({
-                let mut f = serenity::CreateAllowedMentions::default();
-                f.empty_parse()
-                    .parse(serenity::ParseValue::Users)
-                    .replied_user(true);
-                f
+                serenity::CreateAllowedMentions::default()
+                    .all_users(true)
+                    .replied_user(true)
             }),
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),
-                edit_tracker: Some(poise::EditTracker::for_timespan(Duration::from_secs(3600))),
+                edit_tracker: Some(Arc::new(poise::EditTracker::for_timespan(
+                    Duration::from_secs(3600),
+                ))),
                 ..Default::default()
             },
             pre_command: |ctx| {
                 Box::pin(async move {
                     info!(
-                        "Received Command from {} in channel {}: {}",
+                        "Received Command from @{} in channel #{}: `{}`",
                         ctx.author().name,
                         ctx.channel_id()
-                            .name(ctx.cache())
+                            .name(ctx)
                             .await
-                            .unwrap_or_else(|| { "Unknown".to_string() }),
+                            .unwrap_or("Unknown".to_string()),
                         ctx.invocation_string()
                     );
                 })
             },
             ..Default::default()
         })
-        .token(xml::get_bot_token())
-        .intents(
-            serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT,
-        )
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 info!("Logged in as {}", _ready.user.name);
-                ctx.set_activity(serenity::Activity::watching("downloads"))
-                    .await;
+                ctx.set_activity(Some(ActivityData::watching("downloads")));
                 match download_watcher::entrypoint(ctx) {
-                    None => framework.shard_manager().lock().await.shutdown_all().await,
+                    None => framework.shard_manager().shutdown_all().await,
                     Some((tx, shared_thread_infos)) => {
                         return Ok(Data {
                             tx: Some(tx),
                             shared_thread_infos: Some(shared_thread_infos),
-                        })
+                        });
                     }
                 }
                 Ok(Data {
@@ -82,7 +78,16 @@ pub async fn entrypoint() {
                     shared_thread_infos: None,
                 })
             })
-        });
+        })
+        .build();
 
-    framework.run().await.expect("Err creating client");
+    let mut client = serenity::Client::builder(
+        xml::get_bot_token(),
+        serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT,
+    )
+    .framework(framework)
+    .await
+    .unwrap();
+
+    client.start().await.expect("Err creating client");
 }

@@ -9,11 +9,12 @@ use std::time::SystemTime;
 
 use futures::{Stream, StreamExt};
 use log::{error, info, warn};
-use poise::serenity_prelude as serenity;
-use serenity::{futures, AttachmentType};
+use poise::{CreateReply, serenity_prelude as serenity};
+use poise::serenity_prelude::CreateAttachment;
+use serenity::futures;
 
-use crate::bot::{Context, Error};
 use crate::{download_watcher, xml};
+use crate::bot::{Context, Error};
 
 /// Show this help menu
 #[poise::command(prefix_command, track_edits, slash_command)]
@@ -41,14 +42,15 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     let now = SystemTime::now();
     let reply_message = ctx.say(response).await?;
     reply_message
-        .edit(ctx, |builder| {
-            builder.content(match now.elapsed() {
+        .edit(
+            ctx,
+            CreateReply::default().content(match now.elapsed() {
                 Ok(elapsed) => {
                     format!("Pong: {} ms", elapsed.as_millis())
                 }
                 Err(_) => "Pong: could not calculate time difference".to_owned(),
-            })
-        })
+            }),
+        )
         .await?;
     Ok(())
 }
@@ -69,6 +71,7 @@ pub async fn reload_slash(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+//noinspection RsSleepInsideAsyncFunction
 /// Stops the bot
 #[poise::command(slash_command, prefix_command, aliases("shutdown"))]
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
@@ -79,12 +82,7 @@ pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
         }
     }
     sleep(time::Duration::from_secs(1));
-    ctx.framework()
-        .shard_manager
-        .lock()
-        .await
-        .shutdown_all()
-        .await;
+    ctx.framework().shard_manager.shutdown_all().await;
     Ok(())
 }
 
@@ -134,14 +132,14 @@ pub async fn all(ctx: Context<'_>) -> Result<(), Error> {
         })
         .reduce(|x, x1| format!("{}{}", x, x1))
         .unwrap_or("No mappings".to_string());
-    ctx.send(|builder| {
-        builder
+    ctx.send(
+        CreateReply::default()
             .content("Here are all the Mappings")
-            .attachment(AttachmentType::Bytes {
-                data: Cow::from(output.as_bytes()),
-                filename: "mappings.txt".to_string(),
-            })
-    })
+            .attachment(CreateAttachment::bytes(
+                Cow::from(output.as_bytes()),
+                "mappings.txt".to_string(),
+            )),
+    )
     .await?;
     Ok(())
 }

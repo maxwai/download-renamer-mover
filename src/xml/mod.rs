@@ -81,7 +81,7 @@ pub fn get_bot_token() -> String {
             }
             Some(token) => {
                 info!("Getting the Bot Token");
-                return token.to_string();
+                token.to_string()
             }
         },
     }
@@ -102,7 +102,7 @@ pub fn get_main_channel() -> u64 {
             }
             Some(token) => {
                 info!("Getting the Main Channel ID");
-                return match u64::from_str(&*token.to_string()) {
+                return match u64::from_str(token.as_ref()) {
                     Ok(value) => value,
                     Err(_) => {
                         error!("Main Channel ID is not an u64");

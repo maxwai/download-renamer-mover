@@ -1,5 +1,4 @@
 use log::info;
-use log4rs;
 
 pub mod bot;
 pub mod download_watcher;

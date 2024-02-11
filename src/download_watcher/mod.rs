@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use log::{error, info, warn};
 use poise::serenity_prelude as serenity;
+use poise::serenity_prelude::{CreateEmbed, CreateMessage};
 use regex::Regex;
 use serenity::{ChannelId, Context};
 
@@ -89,7 +90,7 @@ async fn run(
 ) {
     const WAIT_TIME_IN_SEC: u64 = 15;
 
-    let channel = ChannelId(xml::get_main_channel());
+    let channel = ChannelId::new(xml::get_main_channel());
     let mut directories: HashMap<String, PathBuf> = HashMap::new();
     let mut to_ignore: Vec<PathBuf> = Vec::new();
     get_known_directories(&anime_folder, &series_folder, &shared_thread_infos);
@@ -105,8 +106,8 @@ async fn run(
         )
         .await
         {
-            match rx.recv_timeout(Duration::from_secs(WAIT_TIME_IN_SEC)) {
-                Ok(signal) => match signal {
+            if let Ok(signal) = rx.recv_timeout(Duration::from_secs(WAIT_TIME_IN_SEC)) {
+                match signal {
                     SIGNAL_STOP => return,
                     SIGNAL_RELOAD => {
                         get_known_directories(&anime_folder, &series_folder, &shared_thread_infos);
@@ -115,8 +116,7 @@ async fn run(
                     }
                     SIGNAL_NEW_MAPPING => get_xml_mappings(&mut directories, &shared_thread_infos),
                     _ => error!("Got unknown signal code: {}", signal),
-                },
-                Err(_) => {} // timeout
+                }
             }
         }
     }
@@ -153,7 +153,7 @@ fn get_xml_mappings(
 ) {
     let new_mappings = xml::get_mappings();
     directories.clear();
-    new_mappings.iter().for_each(|(&ref alt, og)| {
+    new_mappings.iter().for_each(|(alt, og)| {
         let mutex_share = shared_thread_infos.lock().unwrap();
         match mutex_share.og_directories.get(og) {
             None => {}
@@ -189,7 +189,7 @@ async fn check_download_folder(
                 new_to_ignore.push((*file_path).clone());
                 return false;
             }
-            return true;
+            true
         })
     {
         files.push(file);
@@ -197,7 +197,9 @@ async fn check_download_folder(
     to_ignore.clear();
     to_ignore.append(&mut new_to_ignore);
 
-    let pattern = Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(?:(s\d+)[- ]?)?(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
+    let pattern =
+        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(?:(s\d+)[- ]?)?(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)")
+            .unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
     let mut local_files: Vec<String> = Vec::new();
@@ -213,8 +215,7 @@ async fn check_download_folder(
                     .get(1)
                     .unwrap()
                     .as_str()
-                    .replace(".", " ")
-                    .replace("-", " ");
+                    .replace(['.', '-'], " ");
                 let video_name = temp_video_name.trim().to_string();
                 local_files.push(video_name);
             }
@@ -265,8 +266,7 @@ async fn check_download_folder(
                     .get(1)
                     .unwrap()
                     .as_str()
-                    .replace(".", " ")
-                    .replace("-", " ");
+                    .replace(['.', '-'], " ");
                 let video_name = temp_video_name.trim();
                 let season = match captures.get(2).map(|capture| capture.as_str()) {
                     None => {
@@ -360,14 +360,20 @@ async fn check_download_folder(
                                     .unwrap()
                                     .missing_mappings
                                     .push(video_name.to_string());
-                                let _ = channel.send_message(ctx, |builder| {
-                                    builder.embed(|embed_builder| {
-                                        embed_builder.field(
+                                let _ = channel
+                                    .send_message(
+                                        ctx,
+                                        CreateMessage::default()
+                                            .embed(CreateEmbed::default().field(
                                             "Please add a Mapping with following command:",
-                                            format!("`/map new alt:{} og:<series name on the server>`", video_name),
-                                            false)
-                                    })
-                                }).await;
+                                            format!(
+                                                "`/map new alt:{} og:<series name on the server>`",
+                                                video_name
+                                            ),
+                                            false,
+                                        )),
+                                    )
+                                    .await;
                             }
                         }
                     }
@@ -378,13 +384,13 @@ async fn check_download_folder(
     if !reply.is_empty() {
         let _ = channel.say(ctx, reply).await;
     }
-    return false;
+    false
 }
 
 /// Will move a found video to the given destination with the correct name
 async fn move_video(
-    destination: &PathBuf,
-    source: &PathBuf,
+    destination: &Path,
+    source: &Path,
     season: i32,
     episode: i32,
     file_format: &str,
@@ -433,7 +439,7 @@ async fn move_video(
             String::new()
         };
     }
-    return match std::fs::rename(source, target.clone()) {
+    match std::fs::rename(source, target.clone()) {
         Ok(_) => {
             info!(
                 "Moved {} to {}",
@@ -447,13 +453,13 @@ async fn move_video(
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .replace("`", "\\`"),
+                    .replace('`', "\\`"),
                 target
                     .file_name()
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .replace("`", "\\`")
+                    .replace('`', "\\`")
             )
         }
         Err(why) => {
@@ -463,7 +469,7 @@ async fn move_video(
                 ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap()
             )
         }
-    };
+    }
 }
 
 /// The entrypoint to start the download watcher thread
@@ -502,5 +508,5 @@ pub fn entrypoint(ctx: &Context) -> Option<(SyncSender<u8>, Arc<Mutex<ThreadInfo
                 infos_for_thread,
             );
         });
-    return Some((tx, shared_thread_infos));
+    Some((tx, shared_thread_infos))
 }
