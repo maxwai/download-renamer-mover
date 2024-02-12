@@ -19,11 +19,11 @@ COPY ./src ./src
 RUN rm ./target/release/deps/download_renamer_mover*
 RUN cargo install --path .
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 WORKDIR /download-renamer-mover
 
-#RUN apt-get update && apt-get install -y extra-runtime-dependencies && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt install -y openssl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
