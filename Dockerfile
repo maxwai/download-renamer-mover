@@ -23,7 +23,7 @@ FROM debian:bookworm-slim
 
 WORKDIR /download-renamer-mover
 
-RUN apt-get update && apt install -y openssl && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt install -y openssl && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
