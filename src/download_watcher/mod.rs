@@ -198,7 +198,7 @@ async fn check_download_folder(
     to_ignore.append(&mut new_to_ignore);
 
     let pattern =
-        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(?:(s\d+)[- ]?)?(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)")
+        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(s\d+)[- ]?(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)")
             .unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
@@ -268,24 +268,9 @@ async fn check_download_folder(
                     .as_str()
                     .replace(['.', '-'], " ");
                 let video_name = temp_video_name.trim();
-                let season = match captures.get(2).map(|capture| capture.as_str()) {
-                    None => {
-                        let message = format!(
-                            "{} `{}` does not have a Season. Please add a Season or move it manually",
-                            ERROR_EMOJI, name);
-
-                        if reply.len() + message.len() >= 1999 {
-                            let _ = channel.say(ctx, reply.clone()).await;
-                            reply.clear();
-                        }
-                        reply.push_str(message.as_str());
-                        reply.push('\n');
-
-                        to_ignore.push(file);
-                        continue 'file_loop;
-                    }
-                    Some(season) => season[1..].parse::<i32>().unwrap(),
-                };
+                let season = captures.get(2).unwrap().as_str()[1..]
+                    .parse::<i32>()
+                    .unwrap();
                 let episode = captures.get(3).unwrap().as_str()[1..]
                     .parse::<i32>()
                     .unwrap();
