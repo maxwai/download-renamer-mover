@@ -183,10 +183,10 @@ async fn autocomplete_og<'a>(
 pub async fn new(
     ctx: Context<'_>,
     #[description = "alternative name"]
-    #[autocomplete = "autocomplete_alt"]
+    // #[autocomplete = "autocomplete_alt"]
     mut alt: String,
     #[description = "series name on server"]
-    #[autocomplete = "autocomplete_og"]
+    // #[autocomplete = "autocomplete_og"]
     mut og: String,
 ) -> Result<(), Error> {
     alt = alt.to_lowercase();
