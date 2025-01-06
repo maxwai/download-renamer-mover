@@ -215,7 +215,9 @@ async fn check_download_folder(
                     .get(1)
                     .unwrap()
                     .as_str()
-                    .replace(['.', '-'], " ");
+                    .replace(['.', '-'], " ")
+                    .replace(", " , " ")
+                    .replace("," , " ");
                 let video_name = temp_video_name.trim().to_string();
                 local_files.push(video_name);
             }

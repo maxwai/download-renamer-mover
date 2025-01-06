@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
@@ -16,6 +17,7 @@ const DUMMY_CONTENT: &str = r##"
 </root>"##;
 
 const CONFIG_FILE_NAME: &str = "appdata/Config.xml";
+const CONFIG_BACKUP_FILE_NAME: &str = "appdata/Config.xml.bak";
 
 const BOT_TOKEN_TAG: &str = "BotToken";
 const MAIN_CHANNEL_TAG: &str = "MainChannel";
@@ -39,6 +41,12 @@ fn save_dummy_document() {
 
 /// Will write the new XML file to Config.xml
 fn write_document(document: Element) {
+    let file_path = Path::new(CONFIG_FILE_NAME);
+    if let Ok(status) = file_path.try_exists() {
+        if status {
+            let _ = fs::copy(CONFIG_FILE_NAME, CONFIG_BACKUP_FILE_NAME);
+        }
+    }
     match document.write(File::create(CONFIG_FILE_NAME).unwrap()) {
         Ok(_) => info!("Saved the Config.xml"),
         Err(error) => error!("Could not save correctly the XML File.\n{error}"),
@@ -60,6 +68,17 @@ fn get_document() -> Element {
     match Element::parse(file) {
         Ok(element) => element,
         Err(error) => {
+            let file_path = Path::new(CONFIG_BACKUP_FILE_NAME);
+            if let Ok(status) = file_path.try_exists() {
+                if status {
+                    let file = File::open(file_path).unwrap();
+                    if let Ok(element) = Element::parse(file) {
+                        warn!("Using backup config file because main is corrupted");
+                        let _ = fs::copy(CONFIG_BACKUP_FILE_NAME, CONFIG_FILE_NAME);
+                        return element
+                    }
+                }
+            }
             error!("Something went wrong while parsing the xml: {error}");
             exit(1);
         }
@@ -102,13 +121,13 @@ pub fn get_main_channel() -> u64 {
             }
             Some(token) => {
                 info!("Getting the Main Channel ID");
-                return match u64::from_str(token.as_ref()) {
+                match u64::from_str(token.as_ref()) {
                     Ok(value) => value,
                     Err(_) => {
                         error!("Main Channel ID is not an u64");
                         panic!();
                     }
-                };
+                }
             }
         },
     }
