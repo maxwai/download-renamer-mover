@@ -4,7 +4,7 @@ use std::fs::File;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
-
+use std::sync::Mutex;
 use log::{error, info, warn};
 use xmltree::XMLNode::Text;
 use xmltree::{Element, XMLNode};
@@ -28,8 +28,12 @@ const MAPPING_SINGLE_TAG: &str = "Mapping";
 const ALTERNATIVE_ATTRIBUTE_TAG: &str = "alternative";
 // Mappings
 
+static FILE_LOCK: Mutex<()> = Mutex::new(());
+static MAPPING_LOCK: Mutex<()> = Mutex::new(());
+
 /// Saves a dummy document and then exits
 fn save_dummy_document() {
+    let _lock = FILE_LOCK.lock();
     let dummy_element: Element = Element::parse(DUMMY_CONTENT.as_bytes()).unwrap();
     match dummy_element.write(File::create(CONFIG_FILE_NAME).unwrap()) {
         Ok(_) => info!("Created dummy file."),
@@ -41,6 +45,7 @@ fn save_dummy_document() {
 
 /// Will write the new XML file to Config.xml
 fn write_document(document: Element) {
+    let _lock = FILE_LOCK.lock();
     let file_path = Path::new(CONFIG_FILE_NAME);
     if let Ok(status) = file_path.try_exists() {
         if status {
@@ -55,6 +60,7 @@ fn write_document(document: Element) {
 
 /// Will get the Config.xml or, if not present, create a dummy one and exit
 fn get_document() -> Element {
+    let _lock = FILE_LOCK.lock();
     let file_path = Path::new(CONFIG_FILE_NAME);
     match file_path.try_exists() {
         Ok(status) => {
@@ -137,6 +143,7 @@ pub fn get_main_channel() -> u64 {
 ///
 /// The Entries in the HashMap are like this: (alt -> OG)
 pub fn get_mappings() -> HashMap<String, String> {
+    let _lock = MAPPING_LOCK.lock();
     let document = get_document();
     match document.get_child(MAPPINGS_TAG) {
         None => {
@@ -173,6 +180,7 @@ where
     S: Into<String>,
     U: Into<String>,
 {
+    let _lock = MAPPING_LOCK.lock();
     let mut document = get_document();
     let mut temp: Element;
     let mappings: &mut Element = match document.get_mut_child(MAPPINGS_TAG) {
