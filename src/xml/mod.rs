@@ -182,11 +182,13 @@ where
 {
     let _lock = MAPPING_LOCK.lock();
     let mut document = get_document();
-    let mut temp: Element;
     let mappings: &mut Element = match document.get_mut_child(MAPPINGS_TAG) {
         None => {
-            temp = Element::new(MAPPINGS_TAG);
-            &mut temp
+            document.children.push(XMLNode::Element(Element::new(MAPPINGS_TAG)));
+            write_document(document);
+            drop(_lock);
+            add_mappings(old, og);
+            return;
         }
         Some(element) => element,
     };
