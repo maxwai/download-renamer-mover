@@ -197,7 +197,7 @@ async fn check_download_folder(
     to_ignore.append(&mut new_to_ignore);
 
     let pattern =
-        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(s\d+)[- ]?(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
+        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(s\d+)[- ]*(e\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
     let mut local_files: Vec<String> = Vec::new();
