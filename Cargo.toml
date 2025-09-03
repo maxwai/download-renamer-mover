@@ -1,18 +1,18 @@
 [package]
 name = "download-renamer-mover"
-version = "2.3.5"
+version = "2.3.6"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 poise = "0.6.1"
 log = "0.4.27"
 log4rs = "1.3.0"
 xmltree = "0.11.0"
-regex = "1.11.1"
-reqwest = "0.12.22"
+regex = "1.11.2"
+reqwest = "0.12.23"
 
 [features]
 fail-on-warnings = []
