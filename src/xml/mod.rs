@@ -1,11 +1,12 @@
+use log::{error, info, warn};
+use sonarr::apis::configuration::{ApiKey, Configuration};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
-use std::sync::Mutex;
-use log::{error, info, warn};
+use std::sync::{Mutex, OnceLock};
 use xmltree::XMLNode::Text;
 use xmltree::{Element, XMLNode};
 
@@ -13,6 +14,8 @@ const DUMMY_CONTENT: &str = r##"
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <root>
   <BotToken><!--Put here your Bot Token--></BotToken>
+  <SonarrHost><!--Put here your Sonarr Host URL with protocol--></SonarrHost>
+  <SonarrApiToken><!--Put here your Sonarr API Token--></SonarrApiToken>
   <MainChannel><!--Put here the Channel ID of the Main Channel--></MainChannel>
 </root>"##;
 
@@ -20,6 +23,8 @@ const CONFIG_FILE_NAME: &str = "appdata/Config.xml";
 const CONFIG_BACKUP_FILE_NAME: &str = "appdata/Config.xml.bak";
 
 const BOT_TOKEN_TAG: &str = "BotToken";
+const SONARR_HOST_TAG: &str = "SonarrHost";
+const SONARR_API_TOKEN_TAG: &str = "SonarrApiToken";
 const MAIN_CHANNEL_TAG: &str = "MainChannel";
 
 // Mappings
@@ -27,6 +32,8 @@ const MAPPINGS_TAG: &str = "Mappings";
 const MAPPING_SINGLE_TAG: &str = "Mapping";
 const ALTERNATIVE_ATTRIBUTE_TAG: &str = "alternative";
 // Mappings
+
+pub static SONARR_CONFIGURATION: OnceLock<Configuration> = OnceLock::new();
 
 static FILE_LOCK: Mutex<()> = Mutex::new(());
 static MAPPING_LOCK: Mutex<()> = Mutex::new(());
@@ -81,7 +88,7 @@ fn get_document() -> Element {
                     if let Ok(element) = Element::parse(file) {
                         warn!("Using backup config file because main is corrupted");
                         let _ = fs::copy(CONFIG_BACKUP_FILE_NAME, CONFIG_FILE_NAME);
-                        return element
+                        return element;
                     }
                 }
             }
@@ -110,6 +117,64 @@ pub fn get_bot_token() -> String {
             }
         },
     }
+}
+
+/// Will retrieve the Sonarr host without trailing slash
+fn get_sonarr_host() -> String {
+    let document = get_document();
+    match document.get_child(SONARR_HOST_TAG) {
+        None => {
+            error!("No Sonarr Host found");
+            panic!();
+        }
+        Some(element) => match element.get_text() {
+            None => {
+                error!("No Sonarr Host found");
+                panic!();
+            }
+            Some(token) => {
+                info!("Getting the Sonarr Host");
+                let mut token = token.to_string();
+                if token.ends_with("/") {
+                    token.pop();
+                }
+                token
+            }
+        },
+    }
+}
+
+/// Will retrieve the Sonarr Api Token
+fn get_sonarr_token() -> String {
+    let document = get_document();
+    match document.get_child(SONARR_API_TOKEN_TAG) {
+        None => {
+            error!("No Sonarr Api Token found");
+            panic!();
+        }
+        Some(element) => match element.get_text() {
+            None => {
+                error!("No Sonarr Api Token found");
+                panic!();
+            }
+            Some(token) => {
+                info!("Getting the Sonarr Api Token");
+                token.to_string()
+            }
+        },
+    }
+}
+
+pub fn get_sonarr_config<'a>() -> &'a Configuration {
+    SONARR_CONFIGURATION.get_or_init(|| {
+        let mut sonarr_config = Configuration::new();
+        sonarr_config.base_path = get_sonarr_host();
+        sonarr_config.api_key = Some(ApiKey {
+            prefix: None,
+            key: get_sonarr_token(),
+        });
+        sonarr_config
+    })
 }
 
 /// Will retrieve the Main Channel ID
@@ -184,7 +249,9 @@ where
     let mut document = get_document();
     let mappings: &mut Element = match document.get_mut_child(MAPPINGS_TAG) {
         None => {
-            document.children.push(XMLNode::Element(Element::new(MAPPINGS_TAG)));
+            document
+                .children
+                .push(XMLNode::Element(Element::new(MAPPINGS_TAG)));
             write_document(document);
             drop(_lock);
             add_mappings(old, og);
