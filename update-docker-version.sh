@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 docker build -t "maxwai/download-renamer-mover:$1" .
 docker build -t maxwai/download-renamer-mover:latest .
