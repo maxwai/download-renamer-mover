@@ -1,4 +1,4 @@
-FROM rust:1.82.0 AS builder
+FROM rust:1.87.0 AS builder
 
 # create a new empty shell project
 RUN USER=root cargo new --bin download-renamer-mover
@@ -7,6 +7,9 @@ WORKDIR /download-renamer-mover
 # Copy manifests
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
+
+# Copy library
+COPY ./sonarr-sdk ./sonarr-sdk
 
 # Build only the dependencies to cache them
 RUN cargo build --release
@@ -19,7 +22,7 @@ COPY ./src ./src
 RUN rm ./target/release/deps/download_renamer_mover*
 RUN cargo install --path .
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 WORKDIR /download-renamer-mover
 
@@ -45,4 +48,4 @@ COPY --from=builder /usr/local/cargo/bin/download-renamer-mover /usr/local/bin/d
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_DIR=/etc/ssl/certs
 
-ENTRYPOINT ./entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh"]

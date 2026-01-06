@@ -1,12 +1,32 @@
-README.md
-LICENSE
-.dockerignore
-.gitignore
-Dockerfile
-.git/
+# IDEA files
 .idea/
+*.iml
+
+# rust files
+target/
+
+# openapi files
+sonarr-sdk/.openapi-generator
+sonarr-sdk/.openapi-generator-ignore
+node_modules/
+generate-sonarr-sdk.sh
+openapitools.json
+package.json
+package-lock.json
+sonarr-openapi-v3.yaml
+
+# Docker files
+.dockerignore
+Dockerfile
 docker-compose.yml
 update-docker-version.sh
+
+# test files
 appdata/
 server/
-target/
+
+# MISC files
+*.md
+LICENSE
+.gitignore
+.git/
