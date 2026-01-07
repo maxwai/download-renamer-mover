@@ -4,12 +4,12 @@ FROM rust:1.87.0 AS builder
 RUN USER=root cargo new --bin download-renamer-mover
 WORKDIR /download-renamer-mover
 
+# Copy library
+COPY ./sonarr-sdk ./sonarr-sdk
+
 # Copy manifests
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
-
-# Copy library
-COPY ./sonarr-sdk ./sonarr-sdk
 
 # Build only the dependencies to cache them
 RUN cargo build --release

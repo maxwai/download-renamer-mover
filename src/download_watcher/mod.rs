@@ -210,7 +210,7 @@ async fn check_download_folder(
     to_ignore.append(&mut new_to_ignore);
 
     let pattern =
-        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(s\d+)?[- ]*e?(\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
+        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(?:[ (.]+20\d{2}[ ).]+)?(s\d+)?[- ]*e?(\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
     let mut local_files: Vec<String> = Vec::new();
@@ -265,7 +265,12 @@ async fn check_download_folder(
                 to_ignore.push(file);
             }
             Some(captures) => {
-                let temp_video_name = captures.get(1).unwrap().as_str().replace(['.', '-'], " ");
+                let temp_video_name = captures
+                    .get(1)
+                    .unwrap()
+                    .as_str()
+                    .replace(['.', '-'], " ")
+                    .replace("  ", " ");
                 let video_name = temp_video_name.trim();
                 let season = captures.get(2);
                 let episode = captures.get(3).unwrap().as_str().parse::<i32>().unwrap();
