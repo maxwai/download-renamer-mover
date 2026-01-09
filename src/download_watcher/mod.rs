@@ -1,11 +1,10 @@
-extern crate regex;
 extern crate reqwest;
 
 use crate::xml;
 use log::{error, info, warn};
 use poise::serenity_prelude as serenity;
 use poise::serenity_prelude::{CreateEmbed, CreateMessage};
-use regex::Regex;
+use fancy_regex::Regex;
 use serenity::{ChannelId, Context};
 use sonarr::apis::episode_api::api_v3_episode_get;
 use sonarr::apis::series_api::api_v3_series_get;
@@ -210,7 +209,7 @@ async fn check_download_folder(
     to_ignore.append(&mut new_to_ignore);
 
     let pattern =
-        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(?:[ (.]+20\d{2}[ ).]+)?(s\d+)?[- ]*e?(\d+).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
+        Regex::new(r"(?i)^(?:\[.*] *)?(.*?)(?:[ (.]+20\d{2}[ ).]+)?(s\d+)?[- ]*(?<!-)e?(\d+)(?!-).*?(?:.*)?\.([a-zA-Z0-9]*)").unwrap();
 
     // retrieves the video names once in advance to refresh the missing_mappings hashmap
     let mut local_files: Vec<String> = Vec::new();
@@ -220,8 +219,9 @@ async fn check_download_folder(
             Some(string) => string,
         };
         match pattern.captures(name.to_lowercase().as_str()) {
-            None => {}
-            Some(captures) => {
+            Ok(None) => {},
+            Err(_) => {},
+            Ok(Some(captures)) => {
                 let temp_video_name = captures
                     .get(1)
                     .unwrap()
@@ -255,7 +255,7 @@ async fn check_download_folder(
             Some(string) => string,
         };
         match pattern.captures(name.to_lowercase().as_str()) {
-            None => {
+            Ok(None) => {
                 warn!("File did not contain regex");
                 let message = format!(
                     "{} `{}` did not match regex. Please adjust regex to match file name",
@@ -263,8 +263,17 @@ async fn check_download_folder(
                 );
                 append_to_reply(ctx, channel, &mut reply, message).await;
                 to_ignore.push(file);
+            },
+            Err(err) =>  {
+                error!("{:?}", err);
+                let message = format!(
+                    "{} Problem with regex crate with file `{}`: {:?}",
+                    ERROR_EMOJI, name, err
+                );
+                append_to_reply(ctx, channel, &mut reply, message).await;
+                to_ignore.push(file);
             }
-            Some(captures) => {
+            Ok(Some(captures)) => {
                 let temp_video_name = captures
                     .get(1)
                     .unwrap()
@@ -403,8 +412,8 @@ async fn move_video(
 ) -> String {
     let season_destination = destination.join(format!("Staffel {:02}", season));
     if !season_destination.is_dir() {
-        if let Err(why) = std::fs::create_dir(season_destination.clone()) {
-            error!("{:?}", why);
+        if let Err(err) = std::fs::create_dir(season_destination.clone()) {
+            error!("{:?}", err);
             return format!(
                 "{} Something went wrong while trying to create the directory `{}`. Please look at the logs",
                 ERROR_EMOJI, season_destination.display());
@@ -467,8 +476,8 @@ async fn move_video(
                     .replace('`', "\\`")
             )
         }
-        Err(why) => {
-            error!("{:?}", why);
+        Err(err) => {
+            error!("{:?}", err);
             format!(
                 "{} Something went wrong while trying to move the file `{}`. Please look at the logs",
                 ERROR_EMOJI, source.file_name().unwrap().to_str().unwrap()
