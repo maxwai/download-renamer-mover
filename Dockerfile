@@ -1,4 +1,4 @@
-FROM rust:1.87.0 AS builder
+FROM rust:1.93.0 AS builder
 
 # create a new empty shell project
 RUN USER=root cargo new --bin download-renamer-mover
