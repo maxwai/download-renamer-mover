@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "download-renamer-mover"
-version = "2.4.4"
+version = "2.4.5"
 dependencies = [
  "fancy-regex",
  "log",
