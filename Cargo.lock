@@ -2302,7 +2302,7 @@ dependencies = [
 
 [[package]]
 name = "sonarr"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "reqwest 0.13.4",
  "serde",
